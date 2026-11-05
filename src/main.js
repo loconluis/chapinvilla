@@ -91,15 +91,15 @@ function fit() {
       if (kids[i] !== canvas) chrome += kids[i].offsetHeight + 6;
     }
     const used = Math.min(chrome, innerHeight * 0.4);
-    const sw = (innerWidth - 8) / 320;
-    const sh = (innerHeight - used) / 180;
+    const sw = (innerWidth - 8) / 480;
+    const sh = (innerHeight - used) / 270;
     let s = Math.min(sw, sh);
     if (s >= 2) s = Math.floor(s);
     else s = Math.max(s, Math.min(sw, 1.8));
     if (s < 1) s = 1;
-    const px = Math.round(320 * s);
+    const px = Math.round(480 * s);
     canvas.style.width = px + "px";
-    canvas.style.height = Math.round(180 * s) + "px";
+    canvas.style.height = Math.round(270 * s) + "px";
     app.style.setProperty("--w", px + 8 + "px");
   }
 }

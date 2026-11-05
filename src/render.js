@@ -1,5 +1,5 @@
 import { PAL, SPRITES } from "./data.js";
-import { H, LANE_W, PY, ROAD_W, ROAD_X, W, laneAt, laneX, worldY } from "./geom.js";
+import { H, LANE_PX, PY, ROAD_PX, ROAD_WPX, W, Z, laneAt, laneX, worldY } from "./geom.js";
 
 const SCALE = 2;
 
@@ -15,7 +15,7 @@ function blit(ctx, spr, cx, cy, shadow) {
   const y0 = Math.round(cy - (h * SCALE) / 2);
   if (shadow) {
     ctx.fillStyle = PAL[0];
-    ctx.fillRect(x0 + 4, y0 + h * SCALE - 3, w * SCALE - 8, 3);
+    ctx.fillRect(x0 + 6, y0 + h * SCALE - 4, w * SCALE - 12, 4);
   }
   let style = "";
   for (let r = 0; r < h; r++) {
@@ -45,7 +45,7 @@ export function pop(x, y, txt, c) {
 
 function drawFloats(ctx, dt) {
   if (!floats.length) return;
-  ctx.font = "700 9px monospace";
+  ctx.font = "700 14px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
   for (let i = floats.length - 1; i >= 0; i--) {
@@ -55,7 +55,7 @@ function drawFloats(ctx, dt) {
       floats.splice(i, 1);
       continue;
     }
-    f.y -= dt * 20;
+    f.y -= dt * 30;
     ctx.fillStyle = PAL[f.c];
     ctx.fillText(f.txt, f.x | 0, f.y | 0);
   }
@@ -66,8 +66,8 @@ export function burst(x, y, color, n) {
     parts.push({
       x,
       y,
-      vx: (Math.random() - 0.5) * 70,
-      vy: (Math.random() - 0.5) * 70,
+      vx: (Math.random() - 0.5) * 105,
+      vy: (Math.random() - 0.5) * 105,
       life: 0.38,
       c: color,
     });
@@ -85,43 +85,43 @@ export function punch() {
 }
 
 function drawCity(ctx, z, seed) {
-  const span = 42;
+  const span = 63;
   for (let side = 0; side < 2; side++) {
     const base = Math.floor(z / span) - 1;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 7; i++) {
       const idx = base + i;
       const wz = idx * span;
       const y = worldY(z, wz);
-      if (y < -80 || y > H + 30) continue;
+      if (y < -120 || y > H + 45) continue;
       const hsh = hash(idx * 17 + side * 131 + (seed & 255));
-      const edge = side === 0 ? ROAD_X - 12 : W - (ROAD_X + ROAD_W + 12);
-      const bw = 22 + (hsh % 28);
-      const bh = 28 + (hsh % 40);
-      const x = side === 0 ? 4 + (hsh % Math.max(1, edge - bw - 4)) : W - bw - 4 - (hsh % Math.max(1, edge - bw - 4));
+      const edge = side === 0 ? ROAD_PX - 18 : W - (ROAD_PX + ROAD_WPX + 18);
+      const bw = 33 + (hsh % 42);
+      const bh = 42 + (hsh % 60);
+      const x = side === 0 ? 6 + (hsh % Math.max(1, edge - bw - 6)) : W - bw - 6 - (hsh % Math.max(1, edge - bw - 6));
       if (hsh % 6 === 0) {
         ctx.fillStyle = PAL[6];
-        ctx.fillRect(x + 6, y - 8, 3, 10);
+        ctx.fillRect(x + 9, y - 12, 4, 15);
         ctx.fillStyle = PAL[1];
-        ctx.fillRect(x + 1, y - 22, 14, 14);
-        ctx.fillRect(x + 3, y - 28, 10, 8);
+        ctx.fillRect(x + 1, y - 33, 21, 21);
+        ctx.fillRect(x + 4, y - 42, 15, 12);
       } else {
         const body = [4, 6, 1, 5][hsh % 4];
         ctx.fillStyle = PAL[body];
         ctx.fillRect(x, y - bh, bw, bh);
         ctx.fillStyle = PAL[body === 5 || body === 1 ? 6 : 2];
-        for (let wy = y - bh + 4; wy < y - 6; wy += 8) {
-          for (let wx = x + 3; wx < x + bw - 4; wx += 6) {
+        for (let wy = y - bh + 6; wy < y - 9; wy += 12) {
+          for (let wx = x + 4; wx < x + bw - 6; wx += 9) {
             if ((hsh + wx + wy) % 5 === 0) continue;
-            ctx.fillRect(wx, wy, 3, 3);
+            ctx.fillRect(wx, wy, 4, 4);
           }
         }
       }
       if (hsh % 2 === 0) {
-        const lx = side === 0 ? ROAD_X - 16 : ROAD_X + ROAD_W + 12;
+        const lx = side === 0 ? ROAD_PX - 24 : ROAD_PX + ROAD_WPX + 18;
         ctx.fillStyle = PAL[6];
-        ctx.fillRect(lx, y - 18, 2, 18);
+        ctx.fillRect(lx, y - 27, 3, 27);
         ctx.fillStyle = PAL[2];
-        ctx.fillRect(lx - 1, y - 20, 4, 3);
+        ctx.fillRect(lx - 2, y - 30, 6, 4);
       }
     }
   }
@@ -129,20 +129,20 @@ function drawCity(ctx, z, seed) {
 
 function drawRoad(ctx, viewZ) {
   ctx.fillStyle = PAL[5];
-  ctx.fillRect(ROAD_X - 8, 0, 8, H);
-  ctx.fillRect(ROAD_X + ROAD_W, 0, 8, H);
+  ctx.fillRect(ROAD_PX - 12, 0, 12, H);
+  ctx.fillRect(ROAD_PX + ROAD_WPX, 0, 12, H);
   ctx.fillStyle = PAL[6];
-  ctx.fillRect(ROAD_X, 0, ROAD_W, H);
+  ctx.fillRect(ROAD_PX, 0, ROAD_WPX, H);
   ctx.fillStyle = PAL[2];
-  ctx.fillRect(ROAD_X, 0, 2, H);
-  ctx.fillRect(ROAD_X + ROAD_W - 2, 0, 2, H);
+  ctx.fillRect(ROAD_PX, 0, 3, H);
+  ctx.fillRect(ROAD_PX + ROAD_WPX - 3, 0, 3, H);
   ctx.fillStyle = PAL[5];
   const first = Math.floor((viewZ - 200) / 32) * 32;
-  for (let dz = first; dz < viewZ + 60; dz += 32) {
+  for (let dz = first; dz < viewZ + 40; dz += 32) {
     const y = worldY(viewZ, dz);
-    if (y < -20 || y > H) continue;
-    ctx.fillRect(ROAD_X + LANE_W - 1, y, 2, 12);
-    ctx.fillRect(ROAD_X + LANE_W * 2 - 1, y, 2, 12);
+    if (y < -30 || y > H) continue;
+    ctx.fillRect(ROAD_PX + LANE_PX - 2, y, 3, 18);
+    ctx.fillRect(ROAD_PX + LANE_PX * 2 - 2, y, 3, 18);
   }
 }
 
@@ -157,7 +157,7 @@ function drawParts(ctx, dt) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     ctx.fillStyle = PAL[p.c];
-    ctx.fillRect(p.x | 0, p.y | 0, 2, 2);
+    ctx.fillRect(p.x | 0, p.y | 0, 3, 3);
   }
 }
 
@@ -191,9 +191,9 @@ function drawCrosswalks(ctx, run, viewZ) {
     const e = run.ents[i];
     if (e.id !== "peaton" || e.dead) continue;
     const dz = e.z - viewZ;
-    if (dz < -40 || dz > 210) continue;
+    if (dz < -40 || dz > 140) continue;
     const y = worldY(viewZ, e.z);
-    for (let s = 0; s < 5; s++) ctx.fillRect(ROAD_X + 5, y - 16 + s * 7, ROAD_W - 10, 4);
+    for (let s = 0; s < 5; s++) ctx.fillRect(ROAD_PX + 8, y - 24 + s * 10, ROAD_WPX - 16, 6);
   }
 }
 
@@ -244,14 +244,14 @@ export function render(ctx, run, dt, mode, deco) {
     const blink = run.iframes > 0 && ((run.t * 16) | 0) % 2 === 0 && mode === "play";
     if (!blink) {
       const anim = mode === "start" ? deco * 0.08 : run.t;
-      const frame = ((anim * 10) | 0) % 2 ? SPRITES.moto2 : SPRITES.moto;
-      const py = PY + (mode === "start" ? Math.sin(deco * 0.05) : 0);
+      const frame = SPRITES.moto;
+      const py = PY * Z + (mode === "start" ? Math.sin(deco * 0.05) * 1.5 : Math.cos(run.t * 22) * 1.2);
       blit(ctx, frame, laneX(mode === "play" || mode === "pause" ? run.lane : 1), py, true);
       if (run.boost > 0) {
         ctx.fillStyle = PAL[3];
-        ctx.fillRect(laneX(run.lane) - 2, py + 16, 2, 6);
+        ctx.fillRect(laneX(run.lane) - 3, py + 24, 3, 9);
         ctx.fillStyle = PAL[2];
-        ctx.fillRect(laneX(run.lane) + 1, py + 18, 2, 4);
+        ctx.fillRect(laneX(run.lane) + 2, py + 27, 3, 6);
       }
     }
   };
@@ -268,33 +268,33 @@ export function render(ctx, run, dt, mode, deco) {
     if (e.id === "cambia" && ((run.t * 8) | 0) % 2 === 0 && e.laneTo != null) {
       const dir = e.laneTo > e.lane ? 1 : -1;
       ctx.fillStyle = PAL[3];
-      ctx.fillRect(x + dir * 12 - 1, y - 10, 3, 3);
+      ctx.fillRect(x + dir * 18 - 2, y - 15, 5, 5);
     }
   }
 
   if (!drewPlayer) drawPlayer();
 
   const near = run.finish - viewZ;
-  if (near < 220 && near > -40) {
+  if (near < 145 && near > -30) {
     const gy = worldY(viewZ, run.finish);
     ctx.fillStyle = PAL[1];
-    ctx.fillRect(ROAD_X + 2, gy - 26, 4, 28);
-    ctx.fillRect(ROAD_X + ROAD_W - 6, gy - 26, 4, 28);
+    ctx.fillRect(ROAD_PX + 3, gy - 39, 6, 42);
+    ctx.fillRect(ROAD_PX + ROAD_WPX - 9, gy - 39, 6, 42);
     ctx.fillStyle = PAL[2];
-    ctx.fillRect(ROAD_X, gy, ROAD_W, 3);
+    ctx.fillRect(ROAD_PX, gy, ROAD_WPX, 5);
     ctx.fillStyle = PAL[5];
-    ctx.font = "700 8px monospace";
+    ctx.font = "700 12px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText(run.level.dest, ROAD_X + ROAD_W / 2, gy - 4);
+    ctx.fillText(run.level.dest, ROAD_PX + ROAD_WPX / 2, gy - 6);
   }
 
   if (run.boost > 0 && mode === "play") {
     ctx.fillStyle = PAL[2];
-    const o = (run.t * 220) % 24;
-    for (let y = o; y < H; y += 24) {
-      ctx.fillRect(ROAD_X + 8, y, 2, 8);
-      ctx.fillRect(ROAD_X + ROAD_W - 10, y, 2, 8);
+    const o = (run.t * 220) % 36;
+    for (let y = o; y < H; y += 36) {
+      ctx.fillRect(ROAD_PX + 12, y, 3, 12);
+      ctx.fillRect(ROAD_PX + ROAD_WPX - 15, y, 3, 12);
     }
   }
 
@@ -305,7 +305,7 @@ export function render(ctx, run, dt, mode, deco) {
 
   const prog = mode === "start" ? 0 : Math.max(0, Math.min(1, run.z / run.finish));
   ctx.fillStyle = PAL[6];
-  ctx.fillRect(0, H - 4, W, 4);
+  ctx.fillRect(0, H - 6, W, 6);
   ctx.fillStyle = PAL[2];
-  ctx.fillRect(0, H - 4, Math.round(W * prog), 4);
+  ctx.fillRect(0, H - 6, Math.round(W * prog), 6);
 }

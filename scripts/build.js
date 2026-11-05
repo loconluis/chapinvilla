@@ -22,8 +22,8 @@ const bundled = await esbuild.build({
 
 let js = bundled.outputFiles[0].text;
 const tersed = await minify(js, {
-  compress: { passes: 3, ecma: 2020 },
-  mangle: true,
+  compress: { passes: 4, ecma: 2020, unsafe: true, unsafe_arrows: true, unsafe_methods: true, booleans_as_integers: true },
+  mangle: { toplevel: true },
   format: { comments: false },
 });
 js = tersed.code || js;
