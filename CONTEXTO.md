@@ -87,8 +87,8 @@ Fuente original: `Chapinvilla_PRD_TDD_v1.docx`.
 ## UI (Lienzo)
 - El HUD va en una sola franja arriba del canvas: ENERGÍA, ESTRÉS (en naranja), TIEMPO (reloj + barra) y PUNTOS. Los nombres van en 14px y negrita para que se lean. En el teléfono el HUD es una grilla 2×2.
 - El texto de humor va en una línea debajo del canvas.
-- El título CHAPINVILLA va solo, centrado y grande (26 px en el teléfono, 30 en compu), con SONIDO y PAUSA debajo. Antes compartía fila con los botones y quedaba corrido.
-- Los botones táctiles son **flechas dibujadas con CSS** (bordes), sin texto y sin imágenes: `aria-label` los nombra para lectores de pantalla. La barra de turbo vive dentro del botón de acelerar.
+- El título CHAPINVILLA va solo, centrado y grande (26 px en el teléfono, 30 en compu), con sombra dura de 3 px en tinta y SONIDO y PAUSA debajo. Antes compartía fila con los botones y quedaba corrido. La sombra es lo más cerca de «arcade» que se puede llegar gratis: un título de píxeles de verdad (fuente de mapa de bits dibujada en canvas) costaría ~300 bytes, o sea la mitad del presupuesto que queda.
+- Los botones táctiles son **flechas dibujadas con CSS** (`clip-path`), sin texto y sin imágenes: `aria-label` los nombra para lectores de pantalla. Se centran con `left/top: 50%` y márgenes negativos de media caja; antes usaban bordes con márgenes a mano y quedaban corridas. Llevan un relieve interno (`inset 0 -6px`) para leerse como botones. La barra de turbo vive dentro del botón de acelerar.
 - Las pantallas de inicio, pausa, victoria y derrota son un **`<dialog>` modal** con `::backdrop`: tapan el juego en vez de empujarlo. Ojo con la trampa: una regla propia `#panel{display:flex}` le gana al `dialog:not([open]){display:none}` del navegador y el diálogo cerrado se sigue pintando; por eso el selector es `#panel[open]`.
 - Los botones táctiles (IZQ, ACELERA, DER) son grandes y quedan debajo del humor.
 - En compu: flechas o WASD, Espacio (o W / flecha arriba) acelera, S / flecha abajo frena, Esc pausa. En el teléfono: swipe y botones. Arriba, el botón CON SONIDO / EN MUDO.
