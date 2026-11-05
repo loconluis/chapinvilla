@@ -275,7 +275,6 @@ export const LINES = {
     "Dejá que cargue, vos",
   ],
   gasolina: ["Tanque lleno, otra vez"],
-  cafe: ["Café chapín. Ahora sí"],
   tamal: ["Tamal de emergencia"],
   boss: ["El tráfico eterno"],
   suerte: ["Hoy sí hubo suerte"],
@@ -287,8 +286,7 @@ export const LINES = {
  * Salís a las 5:00 y el tráfico va subiendo: los huecos se cierran de 250 a 92
  * y los peatones aparecen más seguido. El plazo es a las 8:00.
  */
-export const LEVELS = [
-  {
+const UNO = {
     id: 1,
     name: "La hora pico",
     dest: "Build & Pitch",
@@ -326,8 +324,10 @@ export const LEVELS = [
       [2, 4, 2, 5],
     ],
     minPick: { gasolina: 8, cafe: 3, tamal: 3 },
-  },
-  {
+  };
+
+/** Nivel 2: llegaste y hay que estacionar. Apagado por ahora (ver BETA). */
+export const PARQUEO = {
     id: 2,
     name: "El parqueo",
     dest: "un espacio libre",
@@ -374,8 +374,16 @@ export const LEVELS = [
     park: 1,
     // Tres espacios repartidos: el que encontrás primero es el que te da la partida.
     libres: 3,
-  },
-];
+};
+
+/**
+ * Feature flag. En 0 el juego publicado es solo «La hora pico» y el nivel 2 no
+ * viaja al navegador: como es una constante, el minificador borra sus datos.
+ * En 1 se publica el parqueo y aparece el botón AL PARQUEO al ganar.
+ */
+const BETA = 0;
+
+export const LEVELS = BETA ? [UNO, PARQUEO] : [UNO];
 
 /**
  * Rangos de mayor a menor, calibrados con pilotos reales.

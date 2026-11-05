@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "fs";
 import test from "node:test";
-import { LEVELS, LINES, OBSTACLES, PICKUPS, RANKS, SPRITES } from "../src/data.js";
+import { LEVELS, LINES, OBSTACLES, PARQUEO, PICKUPS, RANKS, SPRITES } from "../src/data.js";
 import { laneAt, occupied } from "../src/geom.js";
 import { lineFor, resetHumor } from "../src/humor.js";
 import { clockOf, createRun, deadlineOf, formatClock, rankOf, seedFromQuery, step } from "../src/sim.js";
@@ -19,7 +19,7 @@ test("sprites son matrices compactas", () => {
 });
 
 test("nivel 1 es dato, no un caso especial", () => {
-  assert.equal(LEVELS.length, 2);
+  assert.equal(LEVELS.length, 1, "solo se publica La hora pico");
   const level = LEVELS[0];
   assert.equal(level.name, "La hora pico");
   assert.equal(level.obstacles.length, 4);
@@ -316,7 +316,7 @@ test("un piloto atento llega y quedarse quieto no", () => {
 });
 
 test("el parqueo se llena según la hora a la que llegás", () => {
-  const L = LEVELS[1];
+  const L = PARQUEO;
   const solids = (run) => run.ents.filter((e) => !e.pickup).length;
   const temprano = createRun(7, L, 7 * 60 + 20);
   const medio = createRun(7, L, 7 * 60 + 50);
@@ -335,7 +335,7 @@ test("el parqueo se llena según la hora a la que llegás", () => {
 });
 
 test("el parqueo se gana frenando en el espacio, no llegando", () => {
-  const L = LEVELS[1];
+  const L = PARQUEO;
   // El que llega al final sin frenar en el hueco se queda sin dónde.
   for (let seed = 1; seed <= 8; seed++) {
     const sinFrenar = play(seed, choose, L, 7 * 60 + 40);
@@ -353,7 +353,7 @@ test("el parqueo se gana frenando en el espacio, no llegando", () => {
 });
 
 test("el parqueo se puede ganar, incluso llegando tarde", () => {
-  const L = LEVELS[1];
+  const L = PARQUEO;
   for (const arrived of [7 * 60 + 30, 8 * 60, 8 * 60 + 20]) {
     let wins = 0;
     for (let seed = 1; seed <= 10; seed++) {

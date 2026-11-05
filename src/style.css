@@ -81,6 +81,8 @@ canvas { background: #333C49; image-rendering: pixelated; touch-action: none; bo
 #bA.ready { box-shadow: inset 0 0 0 3px #E1532B; }
 #bA.ready::after { content: "LISTO"; position: absolute; top: 3px; right: 5px; font-size: 9px; letter-spacing: .08em; color: #E1532B; }
 button:focus-visible { outline: 2px solid #F1E3C6; outline-offset: 2px; }
+footer { max-width: 46em; padding: 0 14px 24px; text-align: center; font-size: 12px; line-height: 1.6; opacity: .75; }
+footer p { margin: 0; }
 @media (max-width: 420px) {
   h1 { font-size: 26px; letter-spacing: .12em; }
   #hud { grid-template-columns: 1fr 1fr; }

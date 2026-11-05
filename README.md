@@ -2,7 +2,11 @@
 
 La vida es difícil. El juego también.
 
-Dos niveles encadenados. **La hora pico**: salís en moto desde tu casa a las 5:00 y tenés que llegar a Build & Pitch antes de las 8:00 sin quedarte sin gasolina. **El parqueo**: ya llegaste, y ahora hay que estacionar antes de las 9:00 — cuanto más tarde llegaste, más lleno está y menos tiempo te queda. El link `?viaje=` repite la misma calle; no cambia el lugar.
+**La hora pico**: salís en moto desde tu casa a las 5:00 y tenés que llegar a Build & Pitch antes de las 8:00 sin quedarte sin gasolina.
+
+Hay un segundo nivel, **El parqueo**, apagado por ahora detrás de un feature flag: `const BETA = 0;` en `src/data.js`. En 0 no viaja al navegador (el minificador borra sus datos). Con `BETA = 1` se publica y aparece el botón **AL PARQUEO** al ganar.
+
+SEO: título, `description`, `canonical`, Open Graph y `twitter:card` en el `<head>`, más un `<footer>` con texto real. La URL canónica es https://chapinvilla.vercel.app/ — si publicás en otro dominio, cambiala en `src/shell.html`. El link `?viaje=` repite la misma calle; no cambia el lugar.
 
 ## Jugar
 
@@ -30,7 +34,7 @@ GitHub Pages **sigue sin funcionar**: `loconluis.github.io/chapinvilla/` redirig
 
 Hecho con Node 22, Brotli calidad 11:
 
-- sin comprimir: 32473 bytes (99.1 % del tope de 32768)
+- sin comprimir: 32632 bytes (99.6 % del tope de 32768)
 - Brotli: ~11700 bytes
 
 El lienzo lógico es 480×270 y la simulación trabaja en unidades de mundo (factor `Z = 1.5` en `geom.js`). Los sprites se publican empaquetados a 3 bits por píxel: el arte ASCII se queda en `src/data.js` y solo `dist/` lleva el blob.
