@@ -8,7 +8,6 @@ let engine = null;
 let engineGain = null;
 let noiseBuf = null;
 let muted = false;
-let lastStep = -1;
 let kickEl = null;
 let kicked = false;
 
@@ -99,10 +98,6 @@ export function setMuted(m) {
   if (master) master.gain.value = m ? 0 : MASTER;
 }
 
-export function resetMusic() {
-  lastStep = -1;
-}
-
 export function sfx(kind) {
   if (!ac || muted) return;
   if (kind === "hit") noise();
@@ -122,25 +117,15 @@ export function sfx(kind) {
   } else if (kind === "lose") tone(130, 0.32, "sawtooth", 0.08, 70);
 }
 
-const MEL = [0, 3, 7, 10, 7, 3, 5, 7];
-const BASS = [0, 0, 3, 3, 5, 5, 7, 10];
-
+/**
+ * Sin música: solo el motor. Sube con la velocidad y con el turbo,
+ * y se calla al pausar, al perder y en mudo.
+ */
 export function follow(run, playing) {
   if (!ac) return;
   const go = playing && run && run.alive && !run.won && !muted;
   if (engineGain) engineGain.gain.value = go ? 0.05 : 0;
   if (engine && run) {
     engine.frequency.value = 46 + run.spd * 0.22 + (run.boost > 0 ? 28 : 0);
-  }
-  if (!go || !run) return;
-  const rate = 1 + (run.stress / 100) * 0.85;
-  const step = Math.floor((run.t * rate) / 0.18);
-  if (step === lastStep) return;
-  lastStep = step;
-  const note = MEL[step % MEL.length];
-  tone(220 * 2 ** (note / 12), 0.14, "square", 0.06);
-  if (step % 2 === 0) {
-    const b = BASS[step % BASS.length];
-    tone(110 * 2 ** (b / 12), 0.16, "triangle", 0.055);
   }
 }

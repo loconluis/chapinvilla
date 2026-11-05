@@ -1,4 +1,4 @@
-import { follow, resetMusic, setMuted, sfx, unlock } from "./audio.js";
+import { follow, setMuted, sfx, unlock } from "./audio.js";
 import { PY, laneX, worldY } from "./geom.js";
 import { lineFor, resetHumor } from "./humor.js";
 import { burst, clearFx, pop, punch, render } from "./render.js";
@@ -206,7 +206,6 @@ function showStart() {
 function startPlay() {
   unlock();
   sfx("start");
-  resetMusic();
   resetHumor();
   clearFx();
   run = createRun(run.seed, LEVELS[0]);
