@@ -14,7 +14,7 @@ button, p, h1, h2 {
 }
 #app {
   box-sizing: border-box;
-  max-width: 980px;
+  max-width: 1400px;
   min-height: 100dvh;
   margin: 0 auto;
   padding: 10px 10px calc(10px + env(safe-area-inset-bottom));

@@ -112,7 +112,7 @@ export function sfx(kind) {
   } else if (kind === "tamal") {
     tone(294, 0.1, "triangle", 0.09);
     tone(370, 0.16, "triangle", 0.08);
-  } else if (kind === "quetzal") {
+  } else if (kind === "bonus") {
     tone(880, 0.06, "square", 0.08);
     tone(1320, 0.1, "square", 0.07);
   } else if (kind === "boost") tone(160, 0.18, "sawtooth", 0.07, 420);

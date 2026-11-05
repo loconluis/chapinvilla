@@ -34,7 +34,9 @@ const LOSE = {
 const FIRST = {
   cafe: "Café: subió la energía.",
   tamal: "Tamal: bajó el estrés y dio energía. Con el estrés alto se gasta más.",
-  quetzal: "Quetzales: suman al puntaje. No deciden si llegás.",
+};
+const SEE = {
+  peaton: "Peatón cruzando. Frená en su carril y dejalo pasar: da puntos.",
 };
 const HIT = {
   camioneta: "Camioneta: baja energía y sube estrés.",
@@ -42,6 +44,7 @@ const HIT = {
   hoyo: "Hoyo: baja energía y sube mucho el estrés.",
   cambia: "Se mete a tu carril: baja energía y sube estrés.",
   bus: "Bus: tapa dos carriles, baja energía y sube estrés.",
+  peaton: "Peatón: lo atropellaste. Sin puntos. Baja energía y sube estrés.",
 };
 const told = {};
 
@@ -75,22 +78,25 @@ function writeSave() {
 }
 
 function fit() {
-  let chrome = 24;
-  const kids = document.getElementById("app").children;
-  for (let i = 0; i < kids.length; i++) {
-    if (kids[i] !== canvas) chrome += kids[i].offsetHeight + 8;
+  const app = document.getElementById("app");
+  for (let pass = 0; pass < 2; pass++) {
+    let chrome = 12;
+    const kids = app.children;
+    for (let i = 0; i < kids.length; i++) {
+      if (kids[i] !== canvas) chrome += kids[i].offsetHeight + 6;
+    }
+    const used = Math.min(chrome, innerHeight * 0.4);
+    const sw = (innerWidth - 8) / 320;
+    const sh = (innerHeight - used) / 180;
+    let s = Math.min(sw, sh);
+    if (s >= 2) s = Math.floor(s);
+    else s = Math.max(s, Math.min(sw, 1.8));
+    if (s < 1) s = 1;
+    const px = Math.round(320 * s);
+    canvas.style.width = px + "px";
+    canvas.style.height = Math.round(180 * s) + "px";
+    app.style.setProperty("--w", px + 8 + "px");
   }
-  const s = Math.max(
-    1,
-    Math.min(
-      Math.floor((innerWidth - 20) / 320),
-      Math.floor((innerHeight - chrome) / 180),
-    ),
-  );
-  const px = 320 * s;
-  canvas.style.width = px + "px";
-  canvas.style.height = 180 * s + "px";
-  document.getElementById("app").style.setProperty("--w", px + 8 + "px");
 }
 
 function setJoke(text) {
@@ -152,13 +158,13 @@ function showStart() {
     "Desde " + run.origin.name + " hasta " + run.level.dest +
     ". Llegá antes de las " + deadlineOf(run) + ".";
   const rec = document.createElement("p");
-  rec.textContent = "Récord: Q" + save.best;
+  rec.textContent = "Récord de cruces: " + save.best;
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = "Flechas o A D · Espacio acelera · S frena · Esc pausa. En el teléfono, deslizá.";
   panel.append(goal, rec, btn("JUGAR", startPlay), hint);
   tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
-  setJoke("Llegar es ganar. Los Q son el puntaje.");
+  setJoke("Llegar es ganar. Frená para dejar pasar al peatón.");
   pauseBtn.hidden = true;
   fit();
 }
@@ -240,9 +246,9 @@ function showWin() {
   const h = document.createElement("h2");
   h.textContent = "Llegaste a " + run.level.dest + " a las " + clockOf(run);
   const sub = document.createElement("p");
-  sub.textContent = "Puntaje Q" + Math.floor(run.q) + ". Llegar es ganar; los Q son el reto.";
+  sub.textContent = "Bonos por dejar pasar peatones: " + Math.floor(run.q) + ".";
   const rec = document.createElement("p");
-  rec.textContent = beat ? "¡Nuevo récord!" : "Récord: Q" + save.best;
+  rec.textContent = beat ? "¡Nuevo récord!" : "Récord de cruces: " + save.best;
   panel.append(h, sub, rec, endButtons());
   say("win");
   pauseBtn.hidden = true;
@@ -262,7 +268,7 @@ function showLose() {
       ? "Se hizo la hora y " + run.level.dest + " sigue lejos."
       : LOSE[run.reason] || "El tráfico pudo más.";
   const rec = document.createElement("p");
-  rec.textContent = (beat ? "¡Nuevo récord! " : "") + "Puntaje Q" + Math.floor(run.q) + " · récord Q" + save.best;
+  rec.textContent = (beat ? "¡Nuevo récord! " : "") + "Cruces: " + Math.floor(run.q) + " · récord " + save.best;
   panel.append(h, sub, rec, endButtons());
   say(run.reason === "energy" ? "energia" : "tiempo", true);
   pauseBtn.hidden = true;
@@ -279,8 +285,8 @@ async function challenge() {
   const url = location.href;
   const text =
     mode === "win"
-      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + ". Puntaje Q" + Math.floor(run.q) + ". ¿Llegás con más?"
-      : "No llegué a " + run.level.dest + ". Puntaje Q" + Math.floor(run.q) + ". Salí desde mi casa. ¿Vos sí podés?";
+      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + ". Dejé pasar peatones: " + Math.floor(run.q) + " puntos. ¿Vos dejás pasar más?"
+      : "No llegué a " + run.level.dest + ". Dejé pasar peatones: " + Math.floor(run.q) + " puntos. Salí desde mi casa. ¿Vos sí podés?";
   const data = { title: "Chapinvilla", text, url };
   if (navigator.share) {
     try {
@@ -320,12 +326,21 @@ function handle(events) {
       sfx("hit");
       punch();
       burst(laneX(ev.lane), worldY(run.z, ev.z), 3, 7);
-      if (!teach(ev.id, HIT[ev.id])) say(ev.id);
+      const key = ev.id === "peaton" ? "peaton-hit" : ev.id;
+      if (!teach(key, HIT[ev.id])) say(ev.id);
     } else if (ev.k === "pick") {
       sfx(ev.id);
-      burst(laneX(ev.lane), worldY(run.z, ev.z), ev.id === "quetzal" ? 2 : 5, 5);
+      burst(laneX(ev.lane), worldY(run.z, ev.z), 5, 5);
       if (!teach(ev.id, FIRST[ev.id])) say(ev.id);
-    } else if (ev.k === "seen") teach(ev.id, HIT[ev.id]);
+    } else if (ev.k === "seen") teach(ev.id, SEE[ev.id] || HIT[ev.id]);
+    else if (ev.k === "yield") {
+      sfx("bonus");
+      burst(laneX(ev.lane), worldY(run.z, ev.z), 2, 6);
+      if (!teach("yield", "Dejaste pasar al peatón. +" + ev.n + " puntos.")) {
+        setJoke("+" + ev.n + " por dejarlo pasar.");
+        jokeLock = nowT + 1.2;
+      }
+    }
     else if (ev.k === "block") say("camioneta");
     else if (ev.k === "luck") say("suerte");
     else if (ev.k === "boss") say("boss");
@@ -352,7 +367,7 @@ function hud() {
   const left = Math.max(0, 1 - run.t / run.level.timeLimit);
   fillT.style.width = left * 100 + "%";
   clockEl.textContent = clockOf(run);
-  qEl.textContent = "Q" + Math.floor(run.q);
+  qEl.textContent = String(run.q | 0);
   barS.classList.toggle("hot", run.stress >= 76);
 }
 

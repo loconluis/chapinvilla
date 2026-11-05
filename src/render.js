@@ -143,7 +143,7 @@ const SPR = {
   bus: "bus",
   cafe: "cafe",
   tamal: "tamal",
-  quetzal: "quetzal",
+  peaton: "peaton",
 };
 
 export function render(ctx, run, dt, mode, deco) {
@@ -170,7 +170,7 @@ export function render(ctx, run, dt, mode, deco) {
   const list = [];
   for (let i = 0; i < ents.length; i++) {
     const e = ents[i];
-    if (e.dead && e.pickup) continue;
+    if (e.dead && (e.pickup || e.id === "peaton")) continue;
     const y = worldY(viewZ, e.z);
     if (y < -90 || y > H + 70) continue;
     list.push(e);
@@ -197,7 +197,7 @@ export function render(ctx, run, dt, mode, deco) {
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
     if (!drewPlayer && e.z < viewZ) drawPlayer();
-    const bob = e.pickup ? Math.sin(run.t * 5 + e.z) * 1.4 : 0;
+    const bob = e.pickup || e.id === "peaton" ? Math.sin(run.t * 5 + e.z) * 1.4 : 0;
     const x = laneX(laneAt(e, viewZ));
     const y = worldY(viewZ, e.z) + bob;
     const key = SPR[e.id];
