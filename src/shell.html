@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123B35">
+<meta name="description" content="Chapinvilla: llegá a la UVG en la hora pico. Una moto, tres carriles, noventa segundos.">
+<title>Chapinvilla — La hora pico</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23123B35'/%3E%3Cpath fill='%23E5B94B' d='M7 1h2v4H7zm-2 4h6v2H5zm1 2h4v5H6zm-1 5h6v2H5z'/%3E%3C/svg%3E">
+<style>__CHAPIN_CSS__</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="top">
+    <h1>CHAPINVILLA</h1>
+    <button type="button" id="mute">SONIDO</button>
+    <button type="button" id="pause" hidden>PAUSA</button>
+  </div>
+  <p id="tag">La vida es difícil. El juego también.</p>
+</header>
+<div id="hud">
+  <label id="barE">ENERGÍA<b><i id="fillE"></i></b></label>
+  <label id="barS">ESTRÉS<b><i id="fillS"></i></b></label>
+  <label id="barT">TIEMPO <em id="clock">6:30</em><b><i id="fillT"></i></b></label>
+  <strong id="q">Q0</strong>
+</div>
+<canvas id="c" width="320" height="180" aria-hidden="true"></canvas>
+<p id="joke" aria-live="polite"></p>
+<div id="panel"></div>
+<div id="pad">
+  <button type="button" id="bL">IZQ</button>
+  <button type="button" id="bA">ACELERA</button>
+  <button type="button" id="bR">DER</button>
+</div>
+</div>
+<noscript><p>Activá JavaScript para jugar Chapinvilla.</p></noscript>
+<script>__CHAPIN_JS__</script>
+</body>
+</html>
