@@ -151,11 +151,28 @@ function btn(label, fn, alt) {
   return b;
 }
 
-function p(cls, text) {
-  const e = document.createElement("p");
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
   if (cls) e.className = cls;
   e.textContent = text;
   return e;
+}
+
+/** Fila de botones. */
+function bar(...b) {
+  const d = el("div", "row");
+  d.append(...b);
+  return d;
+}
+
+/** Todas las pantallas son lo mismo: título opcional, líneas y una fila de botones. */
+function screen(title, lines, buttons) {
+  clearPanel();
+  if (title) panel.append(el("h2", null, title));
+  for (const [c, t] of lines) panel.append(el("p", c, t));
+  if (buttons) panel.append(buttons);
+  openPanel();
+  fit();
 }
 
 /** Una línea por fuente, alineada en la columna 15 (la página es monoespaciada). */
@@ -185,22 +202,18 @@ function openPanel() {
 
 function showStart() {
   mode = "start";
-  clearPanel();
   const L = run.level;
-  panel.append(
-    p("", "Desde " + run.origin.name + " hasta " + run.level.dest + ". Llegá antes de las " + deadlineOf(run) + "."),
-    p("bd", row("Esquivar", L.dodgePoint) + "\n" + row("Peatón", L.crossBonus) + "\n" + row("Chocar", -L.hitPenalty)),
-    p("", "Salís a las 5:00 y el tráfico va subiendo. Llegá antes de las 8:00."),
-    p("", "Llegar antes y con el tanque entero suma más."),
-    p("", "Récord: " + save.best + " puntos"),
-    btn("JUGAR", startPlay),
-    p("hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa.")
-  );
-  tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
+  tag.textContent = L.name + " · Desde " + run.origin.name + " → " + L.dest;
   setJoke("Llegar es ganar. Frená para dejar pasar al peatón.");
   pauseBtn.hidden = true;
-  openPanel();
-  fit();
+  screen(null, [
+    ["", "Desde " + run.origin.name + " hasta " + L.dest + ". Llegá antes de las " + deadlineOf(run) + "."],
+    ["bd", row("Esquivar", L.dodgePoint) + "\n" + row("Peatón", L.crossBonus) + "\n" + row("Chocar", -L.hitPenalty)],
+    ["", "Salís a las 5:00 y el tráfico va subiendo. Llegá antes de las 8:00."],
+    ["", "Llegar antes y con el tanque entero suma más."],
+    ["", "Récord: " + save.best + " puntos"],
+    ["hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa."],
+  ], btn("JUGAR", startPlay));
 }
 
 function startPlay() {
@@ -226,17 +239,9 @@ function startPlay() {
 function showPause() {
   if (mode !== "play" && mode !== "pause") return;
   mode = "pause";
-  clearPanel();
-  const h = document.createElement("h2");
-  h.textContent = "Pausa";
-  const row = document.createElement("div");
-  row.className = "row";
-  row.append(btn("SEGUIR", resume), btn("OTRA VEZ", again, true));
-  panel.append(h, row);
   setJoke("El tráfico espera. Más o menos.");
   pauseBtn.textContent = "SEGUIR";
-  openPanel();
-  fit();
+  screen("Pausa", [], bar(btn("SEGUIR", resume), btn("OTRA VEZ", again, true)));
 }
 
 function resume() {
@@ -265,55 +270,34 @@ function commitScore() {
   return beat;
 }
 
-function endButtons() {
-  const row = document.createElement("div");
-  row.className = "row";
-  row.append(btn("OTRA VEZ", again), btn("RETAR A UN CUATE", () => challenge(), true));
-  return row;
-}
-
 function showWin(ev) {
   mode = "win";
   const beat = commitScore();
   sfx("win");
-  clearPanel();
-  const h = document.createElement("h2");
-  h.textContent = "Llegaste a " + run.level.dest + " a las " + clockOf(run);
-  panel.append(
-    h,
-    p("bd", breakdown(ev.early)),
-    p("total", run.score + " PUNTOS"),
-    p("rank", rankOf(run.score)),
-    p("hint", beat ? "¡Nuevo récord!" : "Récord: " + save.best + " puntos"),
-    endButtons()
-  );
   say("win");
   pauseBtn.hidden = true;
-  openPanel();
-  fit();
+  screen("Llegaste a " + run.level.dest + " a las " + clockOf(run), [
+    ["bd", breakdown(ev.early)],
+    ["total", run.score + " PUNTOS"],
+    ["rank", rankOf(run.score)],
+    ["hint", beat ? "¡Nuevo récord!" : "Récord: " + save.best + " puntos"],
+  ], bar(btn("OTRA VEZ", again), btn("RETAR A UN CUATE", () => challenge(), true)));
 }
 
 function showLose() {
   mode = "lose";
   const beat = commitScore();
   sfx("lose");
-  clearPanel();
-  const h = document.createElement("h2");
-  h.textContent = "No llegaste";
-  panel.append(
-    h,
-    p("", run.reason === "time"
-      ? "Se hizo la hora y " + run.level.dest + " sigue lejos."
-      : LOSE[run.reason] || "El tráfico pudo más."),
-    p("bd", breakdown(0)),
-    p("total", run.score + " PUNTOS"),
-    p("hint", (beat ? "¡Nuevo récord! " : "") + "Récord: " + save.best + " puntos"),
-    endButtons()
-  );
   say(run.reason === "energy" ? "energia" : "tiempo", true);
   pauseBtn.hidden = true;
-  openPanel();
-  fit();
+  screen("No llegaste", [
+    ["", run.reason === "time"
+      ? "Se hizo la hora y " + run.level.dest + " sigue lejos."
+      : LOSE[run.reason] || "El tráfico pudo más."],
+    ["bd", breakdown(0)],
+    ["total", run.score + " PUNTOS"],
+    ["hint", (beat ? "¡Nuevo récord! " : "") + "Récord: " + save.best + " puntos"],
+  ], bar(btn("OTRA VEZ", again), btn("RETAR A UN CUATE", () => challenge(), true)));
 }
 
 function again() {

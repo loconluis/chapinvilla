@@ -3,11 +3,13 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { minify } from "terser";
 import { packSprites } from "./pack-plugin.js";
 
-const css = readFileSync("src/style.css", "utf8")
-  .replace(/\/\*[\s\S]*?\*\//g, "")
-  .replace(/\s+/g, " ")
-  .replace(/\s*([{}:;,])\s*/g, "$1")
-  .trim();
+const css = (
+  await esbuild.transform(readFileSync("src/style.css", "utf8"), {
+    loader: "css",
+    minify: true,
+    target: "es2020",
+  })
+).code.trim();
 
 const bundled = await esbuild.build({
   entryPoints: ["src/main.js"],
