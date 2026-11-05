@@ -12,12 +12,12 @@
 <body>
 <div id="app">
 <header>
+  <h1>CHAPINVILLA</h1>
+  <p id="tag">La vida es difícil. El juego también.</p>
   <div class="top">
-    <h1>CHAPINVILLA</h1>
-    <button type="button" id="mute" aria-pressed="false">CON SONIDO</button>
+    <button type="button" id="mute" aria-pressed="false">SONIDO</button>
     <button type="button" id="pause" hidden>PAUSA</button>
   </div>
-  <p id="tag">La vida es difícil. El juego también.</p>
 </header>
 <div id="hud">
   <label id="barE">GASOLINA<b><i id="fillE"></i></b></label>
@@ -27,11 +27,11 @@
 </div>
 <canvas id="c" width="480" height="270" aria-hidden="true"></canvas>
 <p id="joke" aria-live="polite"></p>
-<div id="panel"></div>
+<dialog id="panel"></dialog>
 <div id="pad">
-  <button type="button" id="bL">IZQ</button>
-  <button type="button" id="bA">ACELERA<i id="fillB"></i></button>
-  <button type="button" id="bR">DER</button>
+  <button type="button" id="bL" aria-label="Izquierda"></button>
+  <button type="button" id="bA" aria-label="Acelerar"><i id="fillB"></i></button>
+  <button type="button" id="bR" aria-label="Derecha"></button>
 </div>
 </div>
 <noscript><p>Activá JavaScript para jugar Chapinvilla.</p></noscript>

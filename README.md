@@ -30,7 +30,7 @@ GitHub Pages **sigue sin funcionar**: `loconluis.github.io/chapinvilla/` redirig
 
 Hecho con Node 22, Brotli calidad 11:
 
-- sin comprimir: 31979 bytes (97.6 % del tope de 32768)
-- Brotli: ~11600 bytes
+- sin comprimir: 32284 bytes (98.5 % del tope de 32768)
+- Brotli: ~11500 bytes
 
 El lienzo lógico es 480×270 y la simulación trabaja en unidades de mundo (factor `Z = 1.5` en `geom.js`). Los sprites se publican empaquetados a 3 bits por píxel: el arte ASCII se queda en `src/data.js` y solo `dist/` lleva el blob.

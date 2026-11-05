@@ -98,14 +98,8 @@ function drawCity(ctx, z, seed) {
       const bw = 33 + (hsh % 42);
       const bh = 42 + (hsh % 60);
       const x = side === 0 ? 6 + (hsh % Math.max(1, edge - bw - 6)) : W - bw - 6 - (hsh % Math.max(1, edge - bw - 6));
-      if (hsh % 6 === 0) {
-        ctx.fillStyle = PAL[6];
-        ctx.fillRect(x + 9, y - 12, 4, 15);
-        ctx.fillStyle = PAL[1];
-        ctx.fillRect(x + 1, y - 33, 21, 21);
-        ctx.fillRect(x + 4, y - 42, 15, 12);
-      } else {
-        const body = [4, 6, 1, 5][hsh % 4];
+      {
+        const body = [4, 6, 5, 1][hsh % 4];
         ctx.fillStyle = PAL[body];
         ctx.fillRect(x, y - bh, bw, bh);
         ctx.fillStyle = PAL[body === 5 || body === 1 ? 6 : 2];

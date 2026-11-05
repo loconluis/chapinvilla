@@ -106,12 +106,10 @@ export function resetMusic() {
 export function sfx(kind) {
   if (!ac || muted) return;
   if (kind === "hit") noise();
-  else if (kind === "cafe") {
+  // Un solo sonido para los tres objetos: cambia el objeto, no el gesto de agarrar.
+  else if (kind === "cafe" || kind === "tamal" || kind === "gasolina") {
     tone(523, 0.08, "square", 0.08);
     tone(784, 0.12, "square", 0.07);
-  } else if (kind === "tamal") {
-    tone(294, 0.1, "triangle", 0.09);
-    tone(370, 0.16, "triangle", 0.08);
   } else if (kind === "bonus") {
     tone(880, 0.06, "square", 0.08);
     tone(1320, 0.1, "square", 0.07);

@@ -175,7 +175,12 @@ function breakdown(early) {
 }
 
 function clearPanel() {
+  if (panel.open) panel.close();
   panel.replaceChildren();
+}
+
+function openPanel() {
+  if (!panel.open) panel.showModal();
 }
 
 function showStart() {
@@ -189,11 +194,12 @@ function showStart() {
     p("", "Llegar antes y con el tanque entero suma más."),
     p("", "Récord: " + save.best + " puntos"),
     btn("JUGAR", startPlay),
-    p("hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa. En el teléfono, deslizá.")
+    p("hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa.")
   );
   tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
   setJoke("Llegar es ganar. Frená para dejar pasar al peatón.");
   pauseBtn.hidden = true;
+  openPanel();
   fit();
 }
 
@@ -230,6 +236,7 @@ function showPause() {
   panel.append(h, row);
   setJoke("El tráfico espera. Más o menos.");
   pauseBtn.textContent = "SEGUIR";
+  openPanel();
   fit();
 }
 
@@ -283,6 +290,7 @@ function showWin(ev) {
   );
   say("win");
   pauseBtn.hidden = true;
+  openPanel();
   fit();
 }
 
@@ -305,6 +313,7 @@ function showLose() {
   );
   say(run.reason === "energy" ? "energia" : "tiempo", true);
   pauseBtn.hidden = true;
+  openPanel();
   fit();
 }
 
@@ -459,7 +468,8 @@ function boot() {
 }
 
 function paintMute() {
-  muteBtn.textContent = save.mute ? "EN MUDO" : "CON SONIDO";
+  muteBtn.textContent = save.mute ? "MUDO" : "SONIDO";
+  muteBtn.classList.toggle("off", save.mute);
   muteBtn.setAttribute("aria-pressed", save.mute ? "true" : "false");
 }
 
