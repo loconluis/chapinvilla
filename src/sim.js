@@ -303,6 +303,7 @@ export function step(run, input, dt) {
     if (dz > 240) break;
     if (!e.seen && dz < 168 && dz > 0 && !e.pickup) {
       e.seen = true;
+      events.push({ k: "seen", id: e.id });
       if (e.id === "camioneta") events.push({ k: "block", id: e.id, lane: e.lane, z: e.z });
     }
     if (dz < -e.h && !e.scored) {

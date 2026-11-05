@@ -1,5 +1,4 @@
 import { follow, resetMusic, setMuted, sfx, unlock } from "./audio.js";
-import { LINES } from "./data.js";
 import { PY, laneX, worldY } from "./geom.js";
 import { lineFor, resetHumor } from "./humor.js";
 import { burst, clearFx, punch, render } from "./render.js";
@@ -34,8 +33,15 @@ const LOSE = {
 };
 const FIRST = {
   cafe: "Café: subió la energía.",
-  tamal: "Tamal: bajó el estrés y subió un poco la energía.",
-  quetzal: "Quetzales: subió el puntaje.",
+  tamal: "Tamal: bajó el estrés y dio energía. Con el estrés alto se gasta más.",
+  quetzal: "Quetzales: suman al puntaje. No deciden si llegás.",
+};
+const HIT = {
+  camioneta: "Camioneta: baja energía y sube estrés.",
+  motorista: "Motorista: baja energía y sube estrés.",
+  hoyo: "Hoyo: baja energía y sube mucho el estrés.",
+  cambia: "Se mete a tu carril: baja energía y sube estrés.",
+  bus: "Bus: tapa dos carriles, baja energía y sube estrés.",
 };
 const told = {};
 
@@ -99,6 +105,32 @@ function say(key, force) {
   jokeLock = nowT + 1.15;
 }
 
+const qTeach = [];
+
+function showTeach(id, text) {
+  told[id] = 1;
+  setJoke(text);
+  jokeLock = nowT + 2.2;
+}
+
+function teach(id, text) {
+  if (!text || told[id]) return false;
+  if (qTeach.some((p) => p.id === id)) return true;
+  if (nowT < jokeLock || qTeach.length) {
+    qTeach.push({ id, text });
+    return true;
+  }
+  showTeach(id, text);
+  return true;
+}
+
+function pumpTeach() {
+  if (!qTeach.length || nowT < jokeLock) return;
+  const p = qTeach.shift();
+  if (told[p.id]) return pumpTeach();
+  showTeach(p.id, p.text);
+}
+
 function btn(label, fn, alt) {
   const b = document.createElement("button");
   b.type = "button";
@@ -118,19 +150,15 @@ function showStart() {
   const goal = document.createElement("p");
   goal.textContent =
     "Desde " + run.origin.name + " hasta " + run.level.dest +
-    ". Llegá antes de las " + deadlineOf(run) +
-    ", sin quedarte sin energía y sin que el estrés llegue al máximo.";
-  const items = document.createElement("p");
-  items.textContent =
-    "Café sube la energía. Tamal baja el estrés y da un poco de energía. Quetzales suman puntos. Si el estrés se llena, la energía baja más rápido.";
+    ". Llegá antes de las " + deadlineOf(run) + ".";
   const rec = document.createElement("p");
   rec.textContent = "Récord: Q" + save.best;
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = "Flechas o A D · Espacio acelera · S frena · Esc pausa. En el teléfono, deslizá.";
-  panel.append(goal, items, rec, btn("JUGAR", startPlay), hint);
+  panel.append(goal, rec, btn("JUGAR", startPlay), hint);
   tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
-  setJoke("Tres carriles. Una moto. " + run.level.dest + " al final.");
+  setJoke("Llegar es ganar. Los Q son el puntaje.");
   pauseBtn.hidden = true;
   fit();
 }
@@ -210,9 +238,9 @@ function showWin() {
   sfx("win");
   clearPanel();
   const h = document.createElement("h2");
-  h.textContent = "Llegaste a " + run.level.dest + " a las " + clockOf(run) + " con Q" + Math.floor(run.q);
+  h.textContent = "Llegaste a " + run.level.dest + " a las " + clockOf(run);
   const sub = document.createElement("p");
-  sub.textContent = LINES.win[0];
+  sub.textContent = "Puntaje Q" + Math.floor(run.q) + ". Llegar es ganar; los Q son el reto.";
   const rec = document.createElement("p");
   rec.textContent = beat ? "¡Nuevo récord!" : "Récord: Q" + save.best;
   panel.append(h, sub, rec, endButtons());
@@ -234,7 +262,7 @@ function showLose() {
       ? "Se hizo la hora y " + run.level.dest + " sigue lejos."
       : LOSE[run.reason] || "El tráfico pudo más.";
   const rec = document.createElement("p");
-  rec.textContent = (beat ? "¡Nuevo récord! " : "") + "Q" + Math.floor(run.q) + " · récord Q" + save.best;
+  rec.textContent = (beat ? "¡Nuevo récord! " : "") + "Puntaje Q" + Math.floor(run.q) + " · récord Q" + save.best;
   panel.append(h, sub, rec, endButtons());
   say(run.reason === "energy" ? "energia" : "tiempo", true);
   pauseBtn.hidden = true;
@@ -251,8 +279,8 @@ async function challenge() {
   const url = location.href;
   const text =
     mode === "win"
-      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + " con Q" + Math.floor(run.q) + ". ¿Vos llegás?"
-      : "No llegué a " + run.level.dest + ". Salí desde mi casa. ¿Vos sí podés?";
+      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + ". Puntaje Q" + Math.floor(run.q) + ". ¿Llegás con más?"
+      : "No llegué a " + run.level.dest + ". Puntaje Q" + Math.floor(run.q) + ". Salí desde mi casa. ¿Vos sí podés?";
   const data = { title: "Chapinvilla", text, url };
   if (navigator.share) {
     try {
@@ -292,16 +320,13 @@ function handle(events) {
       sfx("hit");
       punch();
       burst(laneX(ev.lane), worldY(run.z, ev.z), 3, 7);
-      say(ev.id);
+      if (!teach(ev.id, HIT[ev.id])) say(ev.id);
     } else if (ev.k === "pick") {
       sfx(ev.id);
       burst(laneX(ev.lane), worldY(run.z, ev.z), ev.id === "quetzal" ? 2 : 5, 5);
-      if (!told[ev.id] && FIRST[ev.id]) {
-        told[ev.id] = 1;
-        setJoke(FIRST[ev.id]);
-        jokeLock = nowT + 2.2;
-      } else say(ev.id);
-    } else if (ev.k === "block") say("camioneta");
+      if (!teach(ev.id, FIRST[ev.id])) say(ev.id);
+    } else if (ev.k === "seen") teach(ev.id, HIT[ev.id]);
+    else if (ev.k === "block") say("camioneta");
     else if (ev.k === "luck") say("suerte");
     else if (ev.k === "boss") say("boss");
     else if (ev.k === "need" || ev.k === "low") say("energia");
@@ -352,6 +377,7 @@ function frame(ts) {
       acc -= STEP;
       handle(events);
     }
+    pumpTeach();
   }
   render(ctx, run, dt, mode, deco);
   hud();
