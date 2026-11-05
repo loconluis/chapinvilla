@@ -1,6 +1,7 @@
 import * as esbuild from "esbuild";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { minify } from "terser";
+import { packSprites } from "./pack-plugin.js";
 
 const css = readFileSync("src/style.css", "utf8")
   .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -16,6 +17,7 @@ const bundled = await esbuild.build({
   minify: true,
   legalComments: "none",
   target: "es2020",
+  plugins: [packSprites],
 });
 
 let js = bundled.outputFiles[0].text;

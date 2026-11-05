@@ -1,12 +1,13 @@
 import { follow, resetMusic, setMuted, sfx, unlock } from "./audio.js";
 import { PY, laneX, worldY } from "./geom.js";
 import { lineFor, resetHumor } from "./humor.js";
-import { burst, clearFx, punch, render } from "./render.js";
+import { burst, clearFx, pop, punch, render } from "./render.js";
 import {
   LEVELS,
   clockOf,
   createRun,
   deadlineOf,
+  rankOf,
   seedFromQuery,
   step,
 } from "./sim.js";
@@ -22,6 +23,8 @@ const clockEl = document.getElementById("clock");
 const fillE = document.getElementById("fillE");
 const fillS = document.getElementById("fillS");
 const fillT = document.getElementById("fillT");
+const fillB = document.getElementById("fillB");
+const boostBtn = document.getElementById("bA");
 const barS = document.getElementById("barS");
 const muteBtn = document.getElementById("mute");
 const pauseBtn = document.getElementById("pause");
@@ -29,15 +32,17 @@ const pauseBtn = document.getElementById("pause");
 const KEY = "chapinvilla.v1";
 const STEP = 1 / 60;
 const LOSE = {
-  energy: "La moto se quedó sin café.",
+  energy: "Se acabó la gasolina y la moto se paró.",
 };
 const FIRST = {
-  cafe: "Café: subió la energía.",
-  tamal: "Tamal: bajó el estrés y dio energía. Con el estrés alto se gasta más.",
+  gasolina: "Gasolina: llenó el tanque. Sin esto la moto se para.",
+  cafe: "Café: te dio velocidad por un rato. Llegar antes vale más puntos.",
+  tamal: "Tamal: bajó el estrés. Con el estrés alto el tanque se vacía más rápido.",
 };
 const SEE = {
-  peaton: "Peatón cruzando. Frená en su carril y dejalo pasar: da puntos.",
+  peaton: "Peatón en el paso. Frená en su carril y dejalo pasar: da puntos.",
 };
+const BOOST = "Turbo lleno. Esquivar lo recarga: ACELERA cuando esté listo.";
 const HIT = {
   camioneta: "Camioneta: baja energía y sube estrés.",
   motorista: "Motorista: baja energía y sube estrés.",
@@ -146,6 +151,29 @@ function btn(label, fn, alt) {
   return b;
 }
 
+function p(cls, text) {
+  const e = document.createElement("p");
+  if (cls) e.className = cls;
+  e.textContent = text;
+  return e;
+}
+
+/** Una línea por fuente, alineada en la columna 15 (la página es monoespaciada). */
+function row(label, v) {
+  const s = (v > 0 ? "+" : "") + v;
+  return label + " ".repeat(Math.max(1, 15 - label.length - s.length)) + s;
+}
+
+/** El desglose del puntaje. Sin early, es lo que llevás cuando perdés. */
+function breakdown(early) {
+  const rows = [row("Esquives", run.pd), row("Peatones", run.pc)];
+  if (early) {
+    rows.push(row("Antes " + deadlineOf(run), run.pt), row("Moto entera", run.pm));
+  }
+  if (run.ph) rows.push(row("Choques", -run.ph));
+  return rows.join("\n");
+}
+
 function clearPanel() {
   panel.replaceChildren();
 }
@@ -153,16 +181,16 @@ function clearPanel() {
 function showStart() {
   mode = "start";
   clearPanel();
-  const goal = document.createElement("p");
-  goal.textContent =
-    "Desde " + run.origin.name + " hasta " + run.level.dest +
-    ". Llegá antes de las " + deadlineOf(run) + ".";
-  const rec = document.createElement("p");
-  rec.textContent = "Récord de cruces: " + save.best;
-  const hint = document.createElement("p");
-  hint.className = "hint";
-  hint.textContent = "Flechas o A D · Espacio acelera · S frena · Esc pausa. En el teléfono, deslizá.";
-  panel.append(goal, rec, btn("JUGAR", startPlay), hint);
+  const L = run.level;
+  panel.append(
+    p("", "Desde " + run.origin.name + " hasta " + run.level.dest + ". Llegá antes de las " + deadlineOf(run) + "."),
+    p("bd", row("Esquivar", L.dodgePoint) + "\n" + row("Peatón", L.crossBonus) + "\n" + row("Chocar", -L.hitPenalty)),
+    p("", "Salís a las 5:00 y el tráfico va subiendo. Llegá antes de las 8:00."),
+    p("", "Llegar antes y con el tanque entero suma más."),
+    p("", "Récord: " + save.best + " puntos"),
+    btn("JUGAR", startPlay),
+    p("hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa. En el teléfono, deslizá.")
+  );
   tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
   setJoke("Llegar es ganar. Frená para dejar pasar al peatón.");
   pauseBtn.hidden = true;
@@ -222,10 +250,10 @@ function togglePause() {
 }
 
 function commitScore() {
-  const q = Math.floor(run.q);
-  const beat = q > save.best;
+  const s = Math.floor(run.score);
+  const beat = s > save.best;
   if (beat) {
-    save.best = q;
+    save.best = s;
     writeSave();
   }
   return beat;
@@ -238,18 +266,21 @@ function endButtons() {
   return row;
 }
 
-function showWin() {
+function showWin(ev) {
   mode = "win";
   const beat = commitScore();
   sfx("win");
   clearPanel();
   const h = document.createElement("h2");
   h.textContent = "Llegaste a " + run.level.dest + " a las " + clockOf(run);
-  const sub = document.createElement("p");
-  sub.textContent = "Bonos por dejar pasar peatones: " + Math.floor(run.q) + ".";
-  const rec = document.createElement("p");
-  rec.textContent = beat ? "¡Nuevo récord!" : "Récord de cruces: " + save.best;
-  panel.append(h, sub, rec, endButtons());
+  panel.append(
+    h,
+    p("bd", breakdown(ev.early)),
+    p("total", run.score + " PUNTOS"),
+    p("rank", rankOf(run.score)),
+    p("hint", beat ? "¡Nuevo récord!" : "Récord: " + save.best + " puntos"),
+    endButtons()
+  );
   say("win");
   pauseBtn.hidden = true;
   fit();
@@ -262,14 +293,16 @@ function showLose() {
   clearPanel();
   const h = document.createElement("h2");
   h.textContent = "No llegaste";
-  const sub = document.createElement("p");
-  sub.textContent =
-    run.reason === "time"
+  panel.append(
+    h,
+    p("", run.reason === "time"
       ? "Se hizo la hora y " + run.level.dest + " sigue lejos."
-      : LOSE[run.reason] || "El tráfico pudo más.";
-  const rec = document.createElement("p");
-  rec.textContent = (beat ? "¡Nuevo récord! " : "") + "Cruces: " + Math.floor(run.q) + " · récord " + save.best;
-  panel.append(h, sub, rec, endButtons());
+      : LOSE[run.reason] || "El tráfico pudo más."),
+    p("bd", breakdown(0)),
+    p("total", run.score + " PUNTOS"),
+    p("hint", (beat ? "¡Nuevo récord! " : "") + "Récord: " + save.best + " puntos"),
+    endButtons()
+  );
   say(run.reason === "energy" ? "energia" : "tiempo", true);
   pauseBtn.hidden = true;
   fit();
@@ -285,8 +318,8 @@ async function challenge() {
   const url = location.href;
   const text =
     mode === "win"
-      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + ". Dejé pasar peatones: " + Math.floor(run.q) + " puntos. ¿Vos dejás pasar más?"
-      : "No llegué a " + run.level.dest + ". Dejé pasar peatones: " + Math.floor(run.q) + " puntos. Salí desde mi casa. ¿Vos sí podés?";
+      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + " con " + run.score + " puntos: " + rankOf(run.score) + ". ¿Me ganás?"
+      : "No llegué a " + run.level.dest + ". Sumé " + run.score + " puntos saliendo desde mi casa. ¿Vos sí podés?";
   const data = { title: "Chapinvilla", text, url };
   if (navigator.share) {
     try {
@@ -326,6 +359,7 @@ function handle(events) {
       sfx("hit");
       punch();
       burst(laneX(ev.lane), worldY(run.z, ev.z), 3, 7);
+      pop(laneX(ev.lane), worldY(run.z, ev.z) - 12, "-" + ev.n, 3);
       const key = ev.id === "peaton" ? "peaton-hit" : ev.id;
       if (!teach(key, HIT[ev.id])) say(ev.id);
     } else if (ev.k === "pick") {
@@ -333,9 +367,12 @@ function handle(events) {
       burst(laneX(ev.lane), worldY(run.z, ev.z), 5, 5);
       if (!teach(ev.id, FIRST[ev.id])) say(ev.id);
     } else if (ev.k === "seen") teach(ev.id, SEE[ev.id] || HIT[ev.id]);
-    else if (ev.k === "yield") {
+    else if (ev.k === "dodge") {
+      pop(laneX(ev.lane), worldY(run.z, ev.z) - 12, "+" + ev.n, 2);
+    } else if (ev.k === "yield") {
       sfx("bonus");
       burst(laneX(ev.lane), worldY(run.z, ev.z), 2, 6);
+      pop(laneX(ev.lane), worldY(run.z, ev.z) - 12, "+" + ev.n, 2);
       if (!teach("yield", "Dejaste pasar al peatón. +" + ev.n + " puntos.")) {
         setJoke("+" + ev.n + " por dejarlo pasar.");
         jokeLock = nowT + 1.2;
@@ -344,12 +381,13 @@ function handle(events) {
     else if (ev.k === "block") say("camioneta");
     else if (ev.k === "luck") say("suerte");
     else if (ev.k === "boss") say("boss");
-    else if (ev.k === "need" || ev.k === "low") say("energia");
+    else if (ev.k === "need") say("turbo");
+    else if (ev.k === "low") say("energia");
     else if (ev.k === "time") say("tiempo");
     else if (ev.k === "boost") {
       sfx("boost");
       burst(laneX(run.lane), PY + 10, 2, 4);
-    } else if (ev.k === "win") showWin();
+    } else if (ev.k === "win") showWin(ev);
     else if (ev.k === "lose") showLose();
   }
 }
@@ -367,7 +405,9 @@ function hud() {
   const left = Math.max(0, 1 - run.t / run.level.timeLimit);
   fillT.style.width = left * 100 + "%";
   clockEl.textContent = clockOf(run);
-  qEl.textContent = String(run.q | 0);
+  qEl.textContent = String(run.score | 0);
+  fillB.style.width = Math.min(100, run.turbo) + "%";
+  boostBtn.classList.toggle("ready", run.turbo >= run.level.turboCost);
   barS.classList.toggle("hot", run.stress >= 76);
 }
 

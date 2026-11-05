@@ -35,6 +35,31 @@ function blit(ctx, spr, cx, cy, shadow) {
 }
 
 const parts = [];
+const floats = [];
+
+/** Número que sube y se apaga. Feedback inmediato de cada punto. */
+export function pop(x, y, txt, c) {
+  if (floats.length > 14) floats.shift();
+  floats.push({ x, y, txt, c, life: 0.75 });
+}
+
+function drawFloats(ctx, dt) {
+  if (!floats.length) return;
+  ctx.font = "700 9px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i];
+    f.life -= dt;
+    if (f.life <= 0) {
+      floats.splice(i, 1);
+      continue;
+    }
+    f.y -= dt * 20;
+    ctx.fillStyle = PAL[f.c];
+    ctx.fillText(f.txt, f.x | 0, f.y | 0);
+  }
+}
 
 export function burst(x, y, color, n) {
   for (let i = 0; i < n; i++) {
@@ -51,6 +76,7 @@ export function burst(x, y, color, n) {
 
 export function clearFx() {
   parts.length = 0;
+  floats.length = 0;
 }
 
 let shake = 0;
@@ -141,10 +167,44 @@ const SPR = {
   hoyo: "hoyo",
   cambia: "car",
   bus: "bus",
+  gasolina: "gasolina",
   cafe: "cafe",
   tamal: "tamal",
   peaton: "peaton",
 };
+
+/** Lo que se agarra lleva marco: así se distingue de lo que te choca. */
+function frame(ctx, b) {
+  const x = b.x0 - 3;
+  const y = b.y0 - 3;
+  ctx.fillStyle = PAL[2];
+  ctx.fillRect(x, y, b.w + 6, 2);
+  ctx.fillRect(x, y + b.h + 4, b.w + 6, 2);
+  ctx.fillRect(x, y, 2, b.h + 6);
+  ctx.fillRect(x + b.w + 4, y, 2, b.h + 6);
+}
+
+/** Paso peatonal: sin las rayas, el peatón flota en medio del asfalto y no se entiende. */
+function drawCrosswalks(ctx, run, viewZ) {
+  ctx.fillStyle = PAL[5];
+  for (let i = 0; i < run.ents.length; i++) {
+    const e = run.ents[i];
+    if (e.id !== "peaton" || e.dead) continue;
+    const dz = e.z - viewZ;
+    if (dz < -40 || dz > 210) continue;
+    const y = worldY(viewZ, e.z);
+    for (let s = 0; s < 5; s++) ctx.fillRect(ROAD_X + 5, y - 16 + s * 7, ROAD_W - 10, 4);
+  }
+}
+
+/** De las 5:00 a las 8:00 la luz pasa de azul de madrugada a sol de mañana. */
+function drawDawn(ctx, run, mode) {
+  if (mode !== "play" && mode !== "pause") return;
+  const p = Math.min(1, run.t / run.level.timeLimit);
+  ctx.fillStyle =
+    "rgba(" + (16 + 26 * p | 0) + "," + (34 + 46 * p | 0) + "," + (74 - 26 * p | 0) + "," + (0.1 - 0.04 * p).toFixed(3) + ")";
+  ctx.fillRect(0, 0, W, H);
+}
 
 export function render(ctx, run, dt, mode, deco) {
   shake = Math.max(0, shake - dt * 8);
@@ -165,6 +225,7 @@ export function render(ctx, run, dt, mode, deco) {
   ctx.translate(sx, sy);
   drawCity(ctx, viewZ, run.seed);
   drawRoad(ctx, viewZ);
+  drawCrosswalks(ctx, run, viewZ);
 
   const ents = run.ents;
   const list = [];
@@ -202,7 +263,8 @@ export function render(ctx, run, dt, mode, deco) {
     const y = worldY(viewZ, e.z) + bob;
     const key = SPR[e.id];
     if (!key) continue;
-    blit(ctx, SPRITES[key], x, y, e.id !== "hoyo");
+    const box = blit(ctx, SPRITES[key], x, y, e.id !== "hoyo");
+    if (e.pickup) frame(ctx, box);
     if (e.id === "cambia" && ((run.t * 8) | 0) % 2 === 0 && e.laneTo != null) {
       const dir = e.laneTo > e.lane ? 1 : -1;
       ctx.fillStyle = PAL[3];
@@ -237,7 +299,9 @@ export function render(ctx, run, dt, mode, deco) {
   }
 
   drawParts(ctx, dt);
+  drawFloats(ctx, dt);
   ctx.restore();
+  drawDawn(ctx, run, mode);
 
   const prog = mode === "start" ? 0 : Math.max(0, Math.min(1, run.z / run.finish));
   ctx.fillStyle = PAL[6];
