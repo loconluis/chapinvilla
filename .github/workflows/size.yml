@@ -18,8 +18,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
+      # el build va antes de los tests: test/pack.test.js inspecciona dist/
       - run: npm run build
+      - run: npm test
       - run: npm run size
       - name: published file matches commit
         run: cmp dist/index.html index.html

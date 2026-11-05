@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "fs";
 import test from "node:test";
-import { LEVELS, LINES, OBSTACLES, PICKUPS, SPRITES } from "../src/data.js";
+import { LEVELS, LINES, OBSTACLES, PARQUEO, PICKUPS, RANKS, SPRITES } from "../src/data.js";
 import { laneAt, occupied } from "../src/geom.js";
 import { lineFor, resetHumor } from "../src/humor.js";
-import { clockOf, createRun, deadlineOf, formatClock, seedFromQuery, step } from "../src/sim.js";
+import { clockOf, createRun, deadlineOf, formatClock, rankOf, seedFromQuery, step } from "../src/sim.js";
 
 test("sprites son matrices compactas", () => {
   for (const [name, rows] of Object.entries(SPRITES)) {
@@ -13,27 +13,38 @@ test("sprites son matrices compactas", () => {
     assert.ok(w >= 8 && w <= 32, name);
     for (const row of rows) {
       assert.equal(row.length, w, name + " [" + row + "]");
-      assert.match(row, /^[0-6.]+$/);
+      assert.match(row, /^[0-7.]+$/);
     }
   }
 });
 
 test("nivel 1 es dato, no un caso especial", () => {
-  assert.equal(LEVELS.length, 1);
+  assert.equal(LEVELS.length, 1, "solo se publica La hora pico");
   const level = LEVELS[0];
   assert.equal(level.name, "La hora pico");
   assert.equal(level.obstacles.length, 4);
-  assert.equal(level.pickups.length, 2);
-  assert.equal(level.crossings, 6);
+  assert.equal(level.pickups.length, 3);
+  assert.ok(level.pickups.includes("gasolina"));
+  assert.equal(level.crossings, 10);
   assert.equal(level.crossBonus, 8);
+  assert.equal(level.dodgePoint, 3);
+  assert.equal(level.hitPenalty, 15);
+  assert.equal(level.earlyPoint, 6);
+  assert.equal(level.motoFactor, 0.5);
+  assert.equal(RANKS.length, 4);
+  assert.ok(RANKS[0][0] > RANKS[1][0] && RANKS[1][0] > RANKS[2][0] && RANKS[2][0] > RANKS[3][0]);
+  assert.equal(RANKS[3][0], 0);
   assert.equal(level.boss.name, "El tráfico eterno");
   assert.equal(level.dest, "Build & Pitch");
   assert.equal(level.home, "tu casa");
-  assert.equal(level.depart, 6 * 60 + 30);
+  assert.equal(level.depart, 5 * 60);
+  assert.equal(level.timeLimit, 180);
   assert.equal("origins" in level, false);
   for (const id of level.obstacles) assert.ok(OBSTACLES[id], id);
   for (const id of level.pickups) assert.ok(PICKUPS[id], id);
-  assert.equal(level.rampEvery, 15);
+  assert.equal(level.rampEvery, 20);
+  // el tráfico sube: los huecos se cierran con el recorrido
+  assert.ok(level.gap1 < level.gap0 * 0.6);
 });
 
 test("frases pedidas y sin repetición seguida", () => {
@@ -42,7 +53,7 @@ test("frases pedidas y sin repetición seguida", () => {
     "Ese ya estaba desde antes",
     "¡Hay campo todavía!",
     "Ya casi, vos",
-    "Necesitás un cafecito",
+    "Se está vaciando el tanque",
     "Hoy sí hubo suerte",
     "Llegaste. No preguntés cómo",
   ]) {
@@ -76,7 +87,8 @@ test("el mismo viaje reconstruye la misma calle", () => {
   }
   assert.equal(sa.z, sb.z);
   assert.equal(sa.energy, sb.energy);
-  assert.equal(sa.q, sb.q);
+  assert.equal(sa.score, sb.score);
+  assert.equal(sa.pd, sb.pd);
   assert.notEqual(sig(createRun(4821)), sig(createRun(4822)));
 });
 
@@ -85,7 +97,7 @@ test("reloj y plazo", () => {
   assert.equal(formatClock(8 * 60), "8:00");
   const run = createRun(2);
   assert.equal(run.origin.name, "tu casa");
-  assert.equal(clockOf(run), "6:30");
+  assert.equal(clockOf(run), "5:00");
   assert.equal(deadlineOf(run), "8:00");
   assert.equal(createRun(4821).origin.name, run.origin.name);
 });
@@ -125,7 +137,8 @@ test("frenar deja pasar al peatón y atropellarlo no suma", () => {
     if (ev.some((e) => e.k === "yield")) got++;
   }
   assert.equal(got, 1);
-  assert.equal(run.q, 8);
+  assert.equal(run.pc, 8);
+  assert.equal(run.score, 8);
   assert.equal(ped.dead, true);
 
   const run2 = createRun(1);
@@ -139,7 +152,143 @@ test("frenar deja pasar al peatón y atropellarlo no suma", () => {
     if (ev.some((e) => e.k === "hit" && e.id === "peaton")) hit = true;
   }
   assert.equal(hit, true);
-  assert.equal(run2.q, 0);
+  assert.equal(run2.pc, 0);
+});
+
+test("esquivar limpio suma y chocar resta", () => {
+  const level = LEVELS[0];
+  const run = createRun(1);
+  const first = run.ents.find((e) => !e.pickup && e.id !== "peaton");
+  assert.ok(first);
+  // carril libre: el obstáculo queda atrás sin tocarnos
+  run.lane = run.laneT = (first.lane + 1) % 3;
+  run.z = first.z + 4;
+  let dodges = 0;
+  for (let i = 0; i < 40; i++) {
+    for (const ev of step(run, { target: run.laneT, boost: false, brake: false }, 1 / 60)) {
+      if (ev.k === "dodge") dodges += ev.n;
+    }
+    if (first.scored) break;
+  }
+  assert.equal(first.scored, true);
+  assert.equal(first.hitFlag, false);
+  assert.equal(dodges, level.dodgePoint);
+  assert.equal(run.pd, level.dodgePoint);
+  assert.equal(run.score, level.dodgePoint);
+
+  // chocar resta y tiene piso en 0
+  const run2 = createRun(1);
+  const victim = run2.ents.find((e) => !e.pickup && e.id !== "peaton");
+  run2.lane = run2.laneT = victim.lane;
+  run2.z = victim.z - 8;
+  run2.iframes = 0;
+  let penalty = 0;
+  for (let i = 0; i < 20; i++) {
+    for (const ev of step(run2, { target: victim.lane, boost: false, brake: false }, 1 / 60)) {
+      if (ev.k === "hit" && ev.id !== "peaton") penalty += ev.n;
+    }
+    if (victim.hitFlag) break;
+  }
+  assert.equal(victim.hitFlag, true);
+  assert.equal(penalty, level.hitPenalty);
+  // Con el marcador en 0 no hay nada que restar: el piso se respeta y el
+  // desglose no inventa un castigo que no ocurrió.
+  assert.equal(run2.score, 0);
+  assert.equal(run2.ph, 0);
+
+  // Con marcador de sobra, la resta entra completa y el desglose cuadra.
+  const run3 = createRun(1);
+  const victim3 = run3.ents.find((e) => !e.pickup && e.id !== "peaton");
+  run3.lane = run3.laneT = victim3.lane;
+  run3.z = victim3.z - 8;
+  run3.iframes = 0;
+  run3.score = 30;
+  run3.pd = 30;
+  for (let i = 0; i < 20 && !victim3.hitFlag; i++) {
+    step(run3, { target: victim3.lane, boost: false, brake: false }, 1 / 60);
+  }
+  assert.equal(victim3.hitFlag, true);
+  assert.equal(run3.ph, level.hitPenalty);
+  assert.equal(run3.score, 30 - level.hitPenalty);
+  assert.equal(run3.score, run3.pd + run3.pc - run3.ph + run3.pt + run3.pm);
+});
+
+test("el peatón ignorado no paga como esquive", () => {
+  const run = createRun(1);
+  const ped = run.ents.find((e) => e.id === "peaton");
+  run.lane = run.laneT = (ped.lane + 1) % 3;
+  run.z = ped.z + 4;
+  let paidForPed = 0;
+  for (let i = 0; i < 40 && !ped.scored; i++) {
+    for (const ev of step(run, { target: run.laneT, boost: false, brake: false }, 1 / 60)) {
+      if (ev.k === "dodge" && ev.z === ped.z) paidForPed += ev.n;
+    }
+  }
+  assert.equal(ped.scored, true);
+  assert.equal(ped.hitFlag, false);
+  assert.equal(paidForPed, 0);
+});
+
+test("llegar antes y con la moto entera suma", () => {
+  const level = LEVELS[0];
+  const a = createRun(5);
+  a.z = a.finish - 4;
+  a.t = level.timeLimit - 120;
+  a.energy = 80;
+  let win = null;
+  for (let i = 0; i < 10 && !win; i++) {
+    for (const ev of step(a, null, 1 / 60)) if (ev.k === "win") win = ev;
+  }
+  assert.ok(win);
+  assert.equal(win.early, 120);
+  assert.equal(win.timeGain, 120 * level.earlyPoint);
+  assert.ok(win.motoGain >= 80 * level.motoFactor - 1 && win.motoGain <= 80 * level.motoFactor + 1);
+
+  // misma semilla, misma energía, llegada más tarde ⇒ menos puntos
+  const b = createRun(5);
+  b.z = b.finish - 4;
+  b.t = level.timeLimit - 40;
+  b.energy = 80;
+  let late = null;
+  for (let i = 0; i < 10 && !late; i++) {
+    for (const ev of step(b, null, 1 / 60)) if (ev.k === "win") late = ev;
+  }
+  assert.ok(late.timeGain < win.timeGain);
+  assert.ok(a.score > b.score, a.score + " vs " + b.score);
+});
+
+test("rangos: umbrales, huecos y el de arriba solo con peatones", () => {
+  for (let i = 0; i < RANKS.length; i++) {
+    const [from, name] = RANKS[i];
+    assert.equal(rankOf(from), name, "umbral " + from);
+    // RANKS va de mayor a menor: un punto abajo del umbral cae al rango siguiente.
+    if (i > 0) assert.equal(rankOf(from - 1), RANKS[i + 1] ? RANKS[i + 1][1] : name, "justo debajo de " + from);
+  }
+  assert.equal(rankOf(-5), RANKS[RANKS.length - 1][1]);
+  assert.equal(rankOf(1e9), RANKS[0][1]);
+});
+
+test("balance: limpio y generoso > apurado > golpeado", () => {
+  const totals = { gen: [], rush: [], sloppy: [] };
+  for (let seed = 1; seed <= 16; seed++) {
+    const gen = play(seed, fueled(yielding(choose)));
+    const rush = play(seed, fueled(choose));
+    const sloppy = play(seed, sloppyOf(fueled(yielding(choose)), seed));
+    assert.ok(gen.won, "generoso seed " + seed + " " + gen.reason);
+    assert.ok(rush.won, "apurado seed " + seed + " " + rush.reason);
+    totals.gen.push(gen.score);
+    totals.rush.push(rush.score);
+    if (sloppy.won) totals.sloppy.push(sloppy.score);
+    // el desglose cuadra con el total
+    assert.ok(gen.pd > 0 && gen.pc > 0, "seed " + seed);
+    assert.equal(gen.score, gen.pd + gen.pc - gen.ph + gen.pt + gen.pm);
+  }
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  assert.ok(avg(totals.gen) > avg(totals.rush), avg(totals.gen) + " vs " + avg(totals.rush));
+  assert.ok(totals.sloppy.length > 0, "el piloto golpeado tiene que llegar al menos una vez");
+  assert.ok(avg(totals.rush) > avg(totals.sloppy), avg(totals.rush) + " vs " + avg(totals.sloppy));
+  // y el rango de arriba es alcanzable jugando bien
+  assert.equal(rankOf(Math.max(...totals.gen)), RANKS[0][1]);
 });
 
 test("un piloto atento llega y quedarse quieto no", () => {
@@ -148,7 +297,7 @@ test("un piloto atento llega y quedarse quieto no", () => {
   const seeds = [];
   for (let seed = 1; seed <= 16; seed++) seeds.push(seed);
   for (const seed of seeds) {
-    const run = play(seed, choose);
+    const run = play(seed, fueled(choose));
     if (run.won) {
       wins++;
       times += run.t;
@@ -157,13 +306,64 @@ test("un piloto atento llega y quedarse quieto no", () => {
     }
   }
   const avg = times / wins;
-  assert.ok(avg > 55 && avg < 90, "duración " + avg.toFixed(1));
+  assert.ok(avg > 140 && avg < 180, "duración " + avg.toFixed(1));
   let afkLosses = 0;
   for (let seed = 1; seed <= 12; seed++) {
     const run = play(seed, () => 1);
     if (!run.won) afkLosses++;
   }
   assert.ok(afkLosses >= 8, "afk losses " + afkLosses);
+});
+
+test("el parqueo se llena según la hora a la que llegás", () => {
+  const L = PARQUEO;
+  const solids = (run) => run.ents.filter((e) => !e.pickup).length;
+  const temprano = createRun(7, L, 7 * 60 + 20);
+  const medio = createRun(7, L, 7 * 60 + 50);
+  const tarde = createRun(7, L, 8 * 60 + 15);
+  assert.ok(solids(medio) > solids(temprano), "a las 7:50 hay más autos que a las 7:20");
+  assert.ok(solids(tarde) > solids(medio), "a las 8:15 hay más autos que a las 7:50");
+  // y cuanto más tarde, menos tiempo: el pitch arranca a las 9:00 igual para todos
+  assert.ok(tarde.limit < medio.limit && medio.limit < temprano.limit, "el plazo se acorta");
+  for (const run of [temprano, medio, tarde]) {
+    // el plazo se acorta con la hora, pero nunca por debajo de 60 s
+    assert.equal(run.limit, Math.max(60, L.fixedUntil - run.origin.depart), "plazo a las " + run.origin.depart);
+  }
+  // misma semilla y misma hora, misma playa
+  assert.equal(sig(createRun(7, L, 500)), sig(createRun(7, L, 500)));
+  assert.notEqual(sig(createRun(7, L, 460)), sig(createRun(7, L, 500)));
+});
+
+test("el parqueo se gana frenando en el espacio, no llegando", () => {
+  const L = PARQUEO;
+  // El que llega al final sin frenar en el hueco se queda sin dónde.
+  for (let seed = 1; seed <= 8; seed++) {
+    const sinFrenar = play(seed, choose, L, 7 * 60 + 40);
+    assert.equal(sinFrenar.won, false, "seed " + seed + " ganó sin frenar");
+    assert.equal(sinFrenar.reason, "lot", "seed " + seed);
+  }
+  // El que se pone en el carril del espacio y frena, entra.
+  let wins = 0;
+  for (let seed = 1; seed <= 8; seed++) {
+    const run = play(seed, parker, L, 7 * 60 + 40);
+    if (run.won) wins++;
+    else assert.fail("seed " + seed + " " + run.reason + " z " + Math.round(run.z) + " carril " + run.finishLane);
+  }
+  assert.equal(wins, 8);
+});
+
+test("el parqueo se puede ganar, incluso llegando tarde", () => {
+  const L = PARQUEO;
+  for (const arrived of [7 * 60 + 30, 8 * 60, 8 * 60 + 20]) {
+    let wins = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const run = play(seed, parker, L, arrived);
+      if (run.won) wins++;
+      else assert.fail("llegando " + arrived + " seed " + seed + " " + run.reason + " z " + Math.round(run.z) + "/" + run.finish);
+      assert.ok(run.t < run.limit, "seed " + seed + " se pasó del plazo");
+    }
+    assert.equal(wins, 10);
+  }
 });
 
 test("el fuente no pide nada por la red", () => {
@@ -223,13 +423,109 @@ function choose(run) {
   return bestL;
 }
 
-function play(seed, policy) {
-  const run = createRun(seed);
+function pedAhead(run, maxDz = 150) {
+  let best = null;
+  let bd = Infinity;
+  for (const e of run.ents) {
+    if (e.id !== "peaton" || e.dead || e.paid) continue;
+    const dz = e.z - run.z;
+    if (dz < 16 || dz > maxDz || dz >= bd) continue;
+    bd = dz;
+    best = e;
+  }
+  return best;
+}
+
+/** La gasolina más cercana adelante, si hay. */
+function gasAhead(run, maxDz = 240) {
+  let best = null;
+  let bd = Infinity;
+  for (const e of run.ents) {
+    if (e.id !== "gasolina" || e.dead) continue;
+    const dz = e.z - run.z;
+    if (dz < 12 || dz > maxDz || dz >= bd) continue;
+    bd = dz;
+    best = e;
+  }
+  return best;
+}
+
+/** Un piloto de verdad carga gasolina cuando el tanque baja. */
+function fueled(inner) {
+  return (run) => {
+    if (run.energy > 46) return inner(run);
+    const gas = gasAhead(run);
+    if (gas && hazard(run, gas.lane) < 260) return { lane: gas.lane, brake: false };
+    return inner(run);
+  };
+}
+
+/** Envuelve un piloto: si hay un peatón cerca y el carril es seguro, frená y dejalo pasar. */
+function yielding(inner) {
+  return (run) => {
+    const ped = pedAhead(run);
+    if (ped && hazard(run, ped.lane) < 200) {
+      return { lane: ped.lane, brake: occupied(run.laneT) === ped.lane && ped.z - run.z < 120 };
+    }
+    return inner(run);
+  };
+}
+
+/** Piloto descuidado: de tanto en tanto elige mal el carril. */
+function sloppyOf(inner, seed) {
+  let a = (seed * 7919) >>> 0;
+  const rnd = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  let errUntil = 0;
+  return (run) => {
+    const want = inner(run);
+    const lane = typeof want === "number" ? want : want.lane;
+    const brake = typeof want === "number" ? false : want.brake;
+    if (run.t > errUntil && rnd() < 0.012) {
+      errUntil = run.t + 0.35;
+      return { lane: (lane + 1 + ((rnd() * 2) | 0)) % 3, brake: false };
+    }
+    return { lane, brake };
+  };
+}
+
+/** El espacio libre más cercano adelante. */
+function spotAhead(r) {
+  let best = null;
+  let bd = Infinity;
+  for (const e of r.ents) {
+    if (e.id !== "libre" || e.dead) continue;
+    const dz = e.z - r.z;
+    if (dz < -20 || dz > 150 || dz >= bd) continue;
+    bd = dz;
+    best = e;
+  }
+  return best ? { spot: best, dz: bd } : null;
+}
+
+/** Piloto que maneja bien y, cuando puede, se mete al espacio frenando. */
+function parker(r) {
+  const near = spotAhead(r);
+  if (near) {
+    if (near.dz < 28) return { lane: near.spot.lane, brake: true };
+    if (hazard(r, near.spot.lane) < 220) return { lane: near.spot.lane, brake: false };
+  }
+  return fueled(yielding(choose))(r);
+}
+
+function play(seed, policy, level = LEVELS[0], arrived) {
+  const run = createRun(seed, level, arrived);
   let guard = 0;
-  while (run.alive && !run.won && guard++ < 60 * 130) {
+  while (run.alive && !run.won && guard++ < 60 * 220) {
     const want = policy(run);
-    const target = Math.abs(want - run.laneT) > 1 ? run.laneT + Math.sign(want - run.laneT) : want;
-    step(run, { target, boost: false, brake: false }, 1 / 60);
+    const lane = typeof want === "number" ? want : want.lane;
+    const brake = typeof want === "number" ? false : !!want.brake;
+    const target = Math.abs(lane - run.laneT) > 1 ? run.laneT + Math.sign(lane - run.laneT) : lane;
+    step(run, { target, boost: false, brake }, 1 / 60);
   }
   return run;
 }

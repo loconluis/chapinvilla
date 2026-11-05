@@ -3,37 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#123B35">
-<meta name="description" content="Chapinvilla: desde tu casa hasta Build &amp; Pitch en la hora pico. Una moto, tres carriles, noventa segundos.">
-<title>Chapinvilla — La hora pico</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23123B35'/%3E%3Cpath fill='%23E5B94B' d='M7 1h2v4H7zm-2 4h6v2H5zm1 2h4v5H6zm-1 5h6v2H5z'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#1E5C4B">
+<title>Chapinvilla — arcade chapín de la hora pico</title>
+<meta name="description" content="Arcade gratis en el navegador. Salís en moto a las 5:00, esquivás el tráfico de la hora pico de Guatemala y llegás a Build &amp; Pitch antes de las 8:00.">
+<link rel="canonical" href="https://chapinvilla.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://chapinvilla.vercel.app/">
+<meta property="og:title" content="Chapinvilla — arcade chapín de la hora pico">
+<meta property="og:description" content="La vida es difícil. El juego también.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23F5B324'/%3E%3C/svg%3E">
 <style>__CHAPIN_CSS__</style>
 </head>
 <body>
 <div id="app">
 <header>
+  <h1>CHAPINVILLA</h1>
+  <p id="tag">La vida es difícil. El juego también.</p>
   <div class="top">
-    <h1>CHAPINVILLA</h1>
-    <button type="button" id="mute" aria-pressed="false">CON SONIDO</button>
+    <button type="button" id="info">INFO</button>
+    <button type="button" id="mute" aria-pressed="false">SONIDO</button>
     <button type="button" id="pause" hidden>PAUSA</button>
   </div>
-  <p id="tag">La vida es difícil. El juego también.</p>
 </header>
 <div id="hud">
-  <label id="barE">ENERGÍA<b><i id="fillE"></i></b></label>
+  <label id="barE">GASOLINA<b><i id="fillE"></i></b></label>
   <label id="barS">ESTRÉS<b><i id="fillS"></i></b></label>
   <label id="barT">TIEMPO <em id="clock">6:30</em><b><i id="fillT"></i></b></label>
-  <label id="barQ">CRUCE<strong id="q">0</strong></label>
+  <label id="barQ">PUNTOS<strong id="q">0</strong></label>
 </div>
-<canvas id="c" width="320" height="180" aria-hidden="true"></canvas>
+<canvas id="c" width="480" height="270" aria-hidden="true"></canvas>
 <p id="joke" aria-live="polite"></p>
-<div id="panel"></div>
+<dialog id="panel"></dialog>
 <div id="pad">
-  <button type="button" id="bL">IZQ</button>
-  <button type="button" id="bA">ACELERA</button>
-  <button type="button" id="bR">DER</button>
+  <button type="button" id="bL" aria-label="Izquierda"></button>
+  <button type="button" id="bA" aria-label="Acelerar"><i id="fillB"></i></button>
+  <button type="button" id="bR" aria-label="Derecha"></button>
+  <button type="button" id="bB" aria-label="Frenar"></button>
 </div>
 </div>
+<footer>
+  <p>Arcade chapín gratis para el navegador: moto, tres carriles y el tráfico de la hora pico en Guatemala.</p>
+</footer>
 <noscript><p>Activá JavaScript para jugar Chapinvilla.</p></noscript>
 <script>__CHAPIN_JS__</script>
 </body>

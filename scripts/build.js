@@ -1,12 +1,15 @@
 import * as esbuild from "esbuild";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { minify } from "terser";
+import { packSprites } from "./pack-plugin.js";
 
-const css = readFileSync("src/style.css", "utf8")
-  .replace(/\/\*[\s\S]*?\*\//g, "")
-  .replace(/\s+/g, " ")
-  .replace(/\s*([{}:;,])\s*/g, "$1")
-  .trim();
+const css = (
+  await esbuild.transform(readFileSync("src/style.css", "utf8"), {
+    loader: "css",
+    minify: true,
+    target: "es2020",
+  })
+).code.trim();
 
 const bundled = await esbuild.build({
   entryPoints: ["src/main.js"],
@@ -16,12 +19,13 @@ const bundled = await esbuild.build({
   minify: true,
   legalComments: "none",
   target: "es2020",
+  plugins: [packSprites],
 });
 
 let js = bundled.outputFiles[0].text;
 const tersed = await minify(js, {
-  compress: { passes: 3, ecma: 2020 },
-  mangle: true,
+  compress: { passes: 4, ecma: 2020, unsafe: true, unsafe_arrows: true, unsafe_methods: true, booleans_as_integers: true },
+  mangle: { toplevel: true },
   format: { comments: false },
 });
 js = tersed.code || js;

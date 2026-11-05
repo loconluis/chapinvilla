@@ -1,4 +1,4 @@
-import { OBSTACLES, PICKUPS, LEVELS } from "./data.js";
+import { OBSTACLES, PICKUPS, LEVELS, RANKS } from "./data.js";
 import { clamp, laneAt, occupied } from "./geom.js";
 
 export { laneAt, occupied };
@@ -41,7 +41,13 @@ export function clockOf(run) {
 }
 
 export function deadlineOf(run) {
-  return formatClock(run.origin.depart + run.level.timeLimit);
+  return formatClock(run.origin.depart + run.limit);
+}
+
+/** Rango del puntaje. De mayor a menor en RANKS. */
+export function rankOf(score) {
+  for (let i = 0; i < RANKS.length; i++) if (score >= RANKS[i][0]) return RANKS[i][1];
+  return RANKS[RANKS.length - 1][1];
 }
 
 function weighted(ids, weights, rng) {
@@ -100,7 +106,7 @@ function makePickup(id, lane, z) {
     stressHit: 0,
     energy: s.energy || 0,
     stressDelta: s.stress || 0,
-    qAdd: s.q || 0,
+    boostN: s.boost || 0,
     pickup: true,
     wave: -1,
     hitFlag: false,
@@ -176,7 +182,7 @@ function placePickup(ents, id, z, rng) {
   return false;
 }
 
-function generate(level, rng) {
+function generate(level, rng, fill = 0) {
   const ents = [];
   const bossAt = Math.floor(level.length * level.boss.at);
   let z = 300;
@@ -184,7 +190,8 @@ function generate(level, rng) {
   let first = true;
   while (guard++ < 600) {
     const d = z / level.length;
-    const gap = level.gap0 + (level.gap1 - level.gap0) * d;
+    // el estacionamiento lleno achica los huecos entre autos parqueados
+    const gap = (level.gap0 + (level.gap1 - level.gap0) * d) * (1 - 0.45 * fill);
     if (z + gap > bossAt - 220) break;
     z += gap;
     const phase = d < 0.34 ? 0 : d < 0.67 ? 1 : 2;
@@ -205,12 +212,15 @@ function generate(level, rng) {
     const id = keys[i];
     let have = 0;
     for (let j = 0; j < ents.length; j++) if (ents[j].id === id) have++;
-    let probe = 420;
+    // Reparto parejo a lo largo de toda la ruta: con la calle larga, amontonarlos
+    // al principio deja la cola sin gasolina y la partida se pierde sola.
+    const span = (bossAt - 400) / (mins[id] + 1);
+    let probe = 400 + span;
     let spins = 0;
-    while (have < mins[id] && spins++ < 80) {
+    while (have < mins[id] && spins++ < 60) {
       if (placePickup(ents, id, probe, rng)) have++;
-      probe += 150;
-      if (probe > bossAt - 220) probe = 420 + spins * 17;
+      probe += span;
+      if (probe > bossAt - 200) probe = 400 + span * 0.5 + spins * 23;
     }
   }
   let placed = 0;
@@ -222,6 +232,10 @@ function generate(level, rng) {
     pz += 640;
     if (pz > bossAt - 300) pz = 520 + spins * 29;
   }
+  // Espacios libres repartidos: hay que ir leyendo la hilera.
+  const spots = level.libres || 0;
+  for (let i = 0; i < spots; i++) placeSolid(ents, "libre", bossAt * (0.42 + i * 0.22), rng);
+
   let bz = bossAt;
   let prev = -1;
   for (let w = 0; w < level.boss.waves; w++) {
@@ -238,11 +252,14 @@ function generate(level, rng) {
   return { ents, bossAt, finish: bz + 160 };
 }
 
-export function createRun(seed, level = LEVELS[0]) {
+export function createRun(seed, level = LEVELS[0], arrived) {
   const s = seed >>> 0;
   const rng = mulberry32(s);
-  const origin = { name: level.home, depart: level.depart };
-  const world = generate(level, rng);
+  const origin = { name: level.home, depart: arrived ?? level.depart };
+  // Cuánto se llenó el estacionamiento: llegás a las 7:30 y está vacío,
+  // a las 8:20 ya no cabe un carro. Sale de la hora a la que llegaste.
+  const fill = arrived == null ? 0.5 : clamp((arrived - level.fillFrom) / level.fillSpan, 0, 1);
+  const world = generate(level, rng, fill);
   return {
     seed: s,
     level,
@@ -250,12 +267,21 @@ export function createRun(seed, level = LEVELS[0]) {
     ents: world.ents,
     bossAt: world.bossAt,
     finish: world.finish,
+    // el plazo puede ser fijo (el pitch arranca a las 9:00) o relativo al nivel
+    // el plazo se acorta si llegás tarde, pero nunca baja de 60 s: perder por reloj sin jugar no es un nivel
+    limit: level.fixedUntil ? Math.max(60, level.fixedUntil - origin.depart) : level.timeLimit,
     z: 0,
     lane: 1,
     laneT: 1,
     energy: level.startEnergy,
+    turbo: 100,
     stress: 0,
-    q: 0,
+    score: 0,
+    pd: 0,
+    pc: 0,
+    ph: 0,
+    pt: 0,
+    pm: 0,
     t: 0,
     boost: 0,
     boostCd: 0,
@@ -274,6 +300,17 @@ export function createRun(seed, level = LEVELS[0]) {
   };
 }
 
+/** Cerrar la partida como ganada, con lo que suman la llegada y el tanque. */
+function park(run, events) {
+  const level = run.level;
+  run.won = true;
+  const early = Math.max(0, run.limit - run.t);
+  run.pt = Math.round(early * level.earlyPoint);
+  run.pm = Math.round(run.energy * level.motoFactor);
+  run.score += run.pt + run.pm;
+  events.push({ k: "win", early: Math.round(early), timeGain: run.pt, motoGain: run.pm });
+}
+
 function yOverlap(run, e) {
   return Math.abs(e.z - run.z) < e.h * 0.45 + 12;
 }
@@ -286,10 +323,10 @@ export function step(run, input, dt) {
   if (input) {
     if (input.target != null) run.laneT = clamp(input.target, 0, 2);
     if (input.boost && run.boostCd <= 0 && run.boost <= 0) {
-      if (run.energy >= level.boostCost) {
-        run.energy -= level.boostCost;
-        run.boost = 0.45;
-        run.boostCd = 0.55;
+      if (run.turbo >= level.turboCost) {
+        run.turbo -= level.turboCost;
+        run.boost = level.boostTime;
+        run.boostCd = 0.45;
         run.iframes = Math.max(run.iframes, 0.22);
         events.push({ k: "boost" });
       } else {
@@ -313,7 +350,7 @@ export function step(run, input, dt) {
   let mul = Math.min(level.rampCap, Math.pow(level.ramp, ramps));
   if (run.z >= run.bossAt - 30) mul = Math.min(mul, level.bossCap);
   let spd = level.baseSpeed * mul;
-  if (run.boost > 0) spd *= 1.62;
+  if (run.boost > 0) spd *= level.boostMul;
   if (run.stun > 0) spd *= 0.42;
   if (run.slow > 0) spd *= 0.5;
   run.mul = mul;
@@ -326,6 +363,7 @@ export function step(run, input, dt) {
   if (run.stress > 75) drain *= 1.35;
   run.energy = Math.max(0, run.energy - drain * dt);
   run.stress = Math.max(0, run.stress - level.stressDecay * dt);
+  if (run.boost <= 0) run.turbo = Math.min(100, run.turbo + level.turboGain * dt);
 
   const pLane = occupied(run.laneT);
   const ents = run.ents;
@@ -342,36 +380,39 @@ export function step(run, input, dt) {
     if (e.id === "peaton" && !e.paid && !e.hitFlag && dz > 16 && dz < 150 && run.slow > 0 && occupied(e.lane) === pLane) {
       e.paid = true;
       e.dead = true;
-      run.q += level.crossBonus;
+      run.pc += level.crossBonus;
+      run.score += level.crossBonus;
       events.push({ k: "yield", n: level.crossBonus, lane: e.lane, z: e.z });
       continue;
     }
     if (dz < -e.h && !e.scored) {
       e.scored = true;
-      if (!e.pickup && !e.hitFlag) {
+      if (!e.pickup && !e.hitFlag && e.id !== "peaton") {
+        run.pd += level.dodgePoint;
+        run.score += level.dodgePoint;
+        run.turbo = Math.min(100, run.turbo + level.turboDodge);
+        events.push({ k: "dodge", n: level.dodgePoint, lane: e.lane, z: e.z });
         if (e.id === "cambia") events.push({ k: "luck" });
-        if (e.id === "bus") {
-          let open = true;
-          let pending = false;
-          for (let j = 0; j < ents.length; j++) {
-            const m = ents[j];
-            if (m.wave !== e.wave) continue;
-            if (!m.scored && !m.dead) pending = true;
-            if (m.hitFlag) open = false;
-          }
-          if (!pending && open) events.push({ k: "luck" });
-        }
       }
       continue;
     }
     if (dz < -8 || dz > 200) continue;
     const eLane = occupied(laneAt(e, run.z));
     if (eLane !== pLane || !yOverlap(run, e)) continue;
+    // El espacio libre no se esquiva: se entra frenando en su carril.
+    if (e.id === "libre") {
+      if (run.slow > 0) {
+        e.dead = true;
+        park(run, events);
+        return events;
+      }
+      continue;
+    }
     if (e.pickup) {
       e.dead = true;
       if (e.energy) run.energy = Math.min(100, run.energy + e.energy);
       if (e.stressDelta) run.stress = clamp(run.stress + e.stressDelta, 0, 100);
-      if (e.qAdd) run.q += e.qAdd;
+      if (e.boostN) run.boost = Math.max(run.boost, e.boostN);
       events.push({ k: "pick", id: e.id, lane: e.lane, z: e.z });
       continue;
     }
@@ -379,16 +420,22 @@ export function step(run, input, dt) {
     e.hitFlag = true;
     run.energy = Math.max(0, run.energy - e.dmg);
     run.stress = Math.min(100, run.stress + e.stressHit);
+    run.ph += level.hitPenalty;
+    // Se registra lo que de verdad se restó: si el marcador estaba en 0, el piso
+    // recorta el castigo y el desglose del final tiene que sumar exacto igual.
+    const before = run.score;
+    run.score = Math.max(0, before - level.hitPenalty);
+    run.ph -= level.hitPenalty - (before - run.score);
     run.iframes = 0.9;
     run.stun = 0.38;
-    events.push({ k: "hit", id: e.id, lane: eLane, z: e.z });
+    events.push({ k: "hit", id: e.id, lane: eLane, z: e.z, n: level.hitPenalty });
   }
 
   if (!run.bossSaid && run.z >= run.bossAt - 200) {
     run.bossSaid = true;
     events.push({ k: "boss" });
   }
-  if (!run.warnedTime && run.t >= level.timeLimit - 18) {
+  if (!run.warnedTime && run.t >= run.limit - 18) {
     run.warnedTime = true;
     events.push({ k: "time" });
   }
@@ -399,8 +446,14 @@ export function step(run, input, dt) {
   if (run.energy > 42) run.warnedEnergy = false;
 
   if (run.z >= run.finish) {
-    run.won = true;
-    events.push({ k: "win" });
+    // En el parqueo, llegar al final sin haberte metido es quedarte sin dónde.
+    if (level.park) {
+      run.alive = false;
+      run.reason = "lot";
+      events.push({ k: "lose", reason: "lot" });
+      return events;
+    }
+    park(run, events);
     return events;
   }
   if (run.energy <= 0) {
@@ -409,7 +462,7 @@ export function step(run, input, dt) {
     events.push({ k: "lose", reason: "energy" });
     return events;
   }
-  if (run.t >= level.timeLimit) {
+  if (run.t >= run.limit) {
     run.alive = false;
     run.reason = "time";
     events.push({ k: "lose", reason: "time" });

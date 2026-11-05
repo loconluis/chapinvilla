@@ -2,7 +2,11 @@
 
 La vida es difícil. El juego también.
 
-Arcade de una sola pantalla para el nivel 1, **La hora pico**: salís en moto desde tu casa y tenés que llegar a Build & Pitch antes de que se acabe el tiempo, sin quedarte sin energía y sin llenar el estrés. El link `?viaje=` repite la misma calle; no cambia el lugar.
+**La hora pico**: salís en moto desde tu casa a las 5:00 y tenés que llegar a Build & Pitch antes de las 8:00 sin quedarte sin gasolina.
+
+Hay un segundo nivel, **El parqueo**, apagado por ahora detrás de un feature flag: `const BETA = 0;` en `src/data.js`. En 0 no viaja al navegador (el minificador borra sus datos). Con `BETA = 1` se publica y aparece el botón **AL PARQUEO** al ganar.
+
+SEO: título, `description`, `canonical`, Open Graph y `twitter:card` en el `<head>`, más un `<footer>` con texto real. La URL canónica es https://chapinvilla.vercel.app/ — si publicás en otro dominio, cambiala en `src/shell.html`. El link `?viaje=` repite la misma calle; no cambia el lugar.
 
 ## Jugar
 
@@ -22,23 +26,15 @@ Controles: flechas o WASD, Espacio acelera, S o flecha abajo frena, Esc pausa. E
 
 GitHub Pages: rama `main`, carpeta `/` (raíz). El `index.html` de la raíz es el artefacto publicado y tiene que ser idéntico a `dist/index.html` (`npm run stage` lo copia).
 
-El repo público ya existe y está vacío: https://github.com/loconluis/chapinvilla . Esta máquina no tiene sesión de GitHub, así que el push hay que hacerlo donde `gh` esté autenticado como `loconluis`:
+El repo público ya tiene el juego: `origin` es `git@github.com:loconluis/chapinvilla.git` y `main` está sincronizado. El push se hace desde una máquina con sesión de GitHub como `loconluis`.
 
-```bash
-git remote add github https://github.com/loconluis/chapinvilla.git
-git push -u github main
-gh api --method POST repos/loconluis/chapinvilla/pages \
-  -f source[branch]=main \
-  -f source[path]=/
-```
-
-`git ls-remote` no devolvió ramas: un push normal alcanza, sin `--force`. Si más adelante la rama remota tuviera solo el commit inicial vacío y el push normal fallara por historias distintas, recién ahí `git push --force-with-lease github main`.
-
-En la web: Settings → Pages → Deploy from a branch → `main` → `/ (root)`. El juego queda en https://loconluis.github.io/chapinvilla/
+GitHub Pages **sigue sin funcionar**: `loconluis.github.io/chapinvilla/` redirige a `resume.luislocon.dev/chapinvilla/` (404) porque el sitio de usuario tiene un CNAME a Vercel, y encenderlo por API respondió 403 (al token le falta `pages=write`). El link jugable del challenge es https://chapinvilla.vercel.app , que sirve el mismo `index.html` de la raíz.
 
 ## Medición
 
 Hecho con Node 22, Brotli calidad 11:
 
-- sin comprimir: 28890 bytes
-- Brotli: 9761 bytes
+- sin comprimir: 32632 bytes (99.6 % del tope de 32768)
+- Brotli: ~11700 bytes
+
+El lienzo lógico es 480×270 y la simulación trabaja en unidades de mundo (factor `Z = 1.5` en `geom.js`). Los sprites se publican empaquetados a 3 bits por píxel: el arte ASCII se queda en `src/data.js` y solo `dist/` lleva el blob.
