@@ -139,6 +139,31 @@ function placeSolid(ents, id, z, rng) {
   return false;
 }
 
+function lanesNear(ents, z, pad) {
+  const s = [];
+  for (let i = 0; i < ents.length; i++) {
+    const e = ents[i];
+    if (Math.abs(e.z - z) >= pad) continue;
+    for (let j = 0; j < e.lanes.length; j++) {
+      if (s.indexOf(e.lanes[j]) < 0) s.push(e.lanes[j]);
+    }
+  }
+  return s;
+}
+
+function placePed(ents, z, rng) {
+  const near = lanesNear(ents, z, 64);
+  if (near.length >= 2) return false;
+  const start = (rng() * 3) | 0;
+  for (let k = 0; k < 3; k++) {
+    const lane = (start + k) % 3;
+    if (near.indexOf(lane) !== -1) continue;
+    ents.push(makeSolid("peaton", lane, z, {}));
+    return true;
+  }
+  return false;
+}
+
 function placePickup(ents, id, z, rng) {
   const start = (rng() * 3) | 0;
   for (let k = 0; k < 3; k++) {
@@ -187,6 +212,15 @@ function generate(level, rng) {
       probe += 150;
       if (probe > bossAt - 220) probe = 420 + spins * 17;
     }
+  }
+  let placed = 0;
+  let pz = 520;
+  let spins = 0;
+  const want = level.crossings || 0;
+  while (placed < want && spins++ < 48) {
+    if (placePed(ents, pz, rng)) placed++;
+    pz += 640;
+    if (pz > bossAt - 300) pz = 520 + spins * 29;
   }
   let bz = bossAt;
   let prev = -1;
@@ -237,7 +271,6 @@ export function createRun(seed, level = LEVELS[0]) {
     warnedTime: false,
     warnedEnergy: false,
     bossSaid: false,
-    scoreZ: 400,
   };
 }
 
@@ -303,12 +336,19 @@ export function step(run, input, dt) {
     if (dz > 240) break;
     if (!e.seen && dz < 168 && dz > 0 && !e.pickup) {
       e.seen = true;
+      events.push({ k: "seen", id: e.id });
       if (e.id === "camioneta") events.push({ k: "block", id: e.id, lane: e.lane, z: e.z });
+    }
+    if (e.id === "peaton" && !e.paid && !e.hitFlag && dz > 16 && dz < 150 && run.slow > 0 && occupied(e.lane) === pLane) {
+      e.paid = true;
+      e.dead = true;
+      run.q += level.crossBonus;
+      events.push({ k: "yield", n: level.crossBonus, lane: e.lane, z: e.z });
+      continue;
     }
     if (dz < -e.h && !e.scored) {
       e.scored = true;
       if (!e.pickup && !e.hitFlag) {
-        run.q += 1;
         if (e.id === "cambia") events.push({ k: "luck" });
         if (e.id === "bus") {
           let open = true;
@@ -344,11 +384,6 @@ export function step(run, input, dt) {
     events.push({ k: "hit", id: e.id, lane: eLane, z: e.z });
   }
 
-  while (run.z >= run.scoreZ && run.scoreZ < run.finish) {
-    run.q += 1;
-    run.scoreZ += 450;
-  }
-
   if (!run.bossSaid && run.z >= run.bossAt - 200) {
     run.bossSaid = true;
     events.push({ k: "boss" });
@@ -365,7 +400,6 @@ export function step(run, input, dt) {
 
   if (run.z >= run.finish) {
     run.won = true;
-    run.q += Math.max(0, Math.floor(level.timeLimit - run.t));
     events.push({ k: "win" });
     return events;
   }

@@ -14,7 +14,7 @@ button, p, h1, h2 {
 }
 #app {
   box-sizing: border-box;
-  max-width: 980px;
+  max-width: 1400px;
   min-height: 100dvh;
   margin: 0 auto;
   padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
@@ -76,6 +76,7 @@ h1 {
 #barT i { background: #5B83A6; }
 #barS.hot b { border-color: #E66A45; }
 #clock { color: #E5B94B; font-size: 14px; font-style: normal; }
+#barQ { color: #E5B94B; }
 #q {
   color: #E5B94B;
   font-size: 20px;
@@ -128,5 +129,5 @@ button:focus-visible {
 @media (max-width: 420px) {
   h1 { font-size: 18px; letter-spacing: 0.08em; }
   #hud { grid-template-columns: 1fr 1fr; }
-  #q { grid-column: 1 / -1; }
+  #barQ { grid-column: 1 / -1; }
 }

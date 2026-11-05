@@ -23,7 +23,9 @@ test("nivel 1 es dato, no un caso especial", () => {
   const level = LEVELS[0];
   assert.equal(level.name, "La hora pico");
   assert.equal(level.obstacles.length, 4);
-  assert.equal(level.pickups.length, 3);
+  assert.equal(level.pickups.length, 2);
+  assert.equal(level.crossings, 6);
+  assert.equal(level.crossBonus, 8);
   assert.equal(level.boss.name, "El tráfico eterno");
   assert.equal(level.dest, "Build & Pitch");
   assert.equal(level.home, "tu casa");
@@ -105,8 +107,39 @@ test("nunca se tapan los tres carriles", () => {
     assert.ok(run.ents.some((e) => e.id === "bus"));
     assert.ok(run.ents.some((e) => e.id === "cafe"));
     assert.ok(run.ents.some((e) => e.id === "tamal"));
-    assert.ok(run.ents.some((e) => e.id === "quetzal"));
+    assert.ok(run.ents.some((e) => e.id === "peaton"));
+    assert.equal(run.ents.some((e) => e.id === "quetzal"), false);
   }
+});
+
+test("frenar deja pasar al peatón y atropellarlo no suma", () => {
+  const run = createRun(1);
+  const ped = run.ents.find((e) => e.id === "peaton");
+  assert.ok(ped);
+  run.z = ped.z - 80;
+  run.lane = ped.lane;
+  run.laneT = ped.lane;
+  let got = 0;
+  for (let i = 0; i < 50; i++) {
+    const ev = step(run, { target: ped.lane, boost: false, brake: i < 10 }, 1 / 60);
+    if (ev.some((e) => e.k === "yield")) got++;
+  }
+  assert.equal(got, 1);
+  assert.equal(run.q, 8);
+  assert.equal(ped.dead, true);
+
+  const run2 = createRun(1);
+  const ped2 = run2.ents.find((e) => e.id === "peaton");
+  run2.z = ped2.z - 28;
+  run2.lane = ped2.lane;
+  run2.laneT = ped2.lane;
+  let hit = false;
+  for (let i = 0; i < 50; i++) {
+    const ev = step(run2, { target: ped2.lane, boost: false, brake: false }, 1 / 60);
+    if (ev.some((e) => e.k === "hit" && e.id === "peaton")) hit = true;
+  }
+  assert.equal(hit, true);
+  assert.equal(run2.q, 0);
 });
 
 test("un piloto atento llega y quedarse quieto no", () => {
