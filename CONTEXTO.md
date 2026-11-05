@@ -1,7 +1,7 @@
 # Chapinvilla — contexto del proyecto
 
 > Documento vivo para cualquier agente o persona que retome este trabajo. Actualizalo al cerrar cada etapa.
-> Última actualización: 5 nov 2026, tarde (hora de Guatemala).
+> Última actualización: 5 nov 2026, publicación en GitHub.
 
 ## Qué es
 Chapinvilla es un juego arcade web de Luis Locon (GitHub `loconluis`) para el challenge **Build & Play** de Build & Pitch.
@@ -99,3 +99,4 @@ Energía, estrés y tiempo son medidores del juego, no datos reales. El reloj es
 ## Bitácora
 - 2026-11-05: Luis manda el PRD de Chapinvilla. El Dev Team lo revisa y dice que cumple con cambios. Se fusiona con «Llegá a la UVG» y se acuerda el nivel 1 como MVP. Luis da el OK para construir solo el nivel 1, «y vamos viendo».
 - 2026-11-05 (tarde): Nivel 1 jugable en un solo `index.html`. Sin comprimir **27652** bytes. Brotli **9415** bytes (meta interna ~24576). Action de tamaño en `.github/workflows/size.yml`. Pruebas de simulación en verde: la misma semilla reconstruye la calle, nunca se tapan 3 carriles, un piloto atento llega en ~84 s sin choques y quedarse en un carril pierde. En Chrome: JUGAR, pausa, OTRA VEZ, récord en `localStorage`, humor sin repetición inmediata, y RETAR A UN CUATE arma el texto con el link. El repo https://github.com/loconluis/chapinvilla existe, público y sin commits. Desde esta máquina `git push` a GitHub pide usuario: no hay `gh auth`. El push normal (sin force) y Pages en `main` `/` están escritos en el README. Falta ejecutarlos con la sesión de `loconluis`.
+- 2026-11-05 (publicación): Subido a GitHub. `main` de https://github.com/loconluis/chapinvilla tiene el nivel 1 (commit `404c581`, encima del commit inicial `afe5bf9`; push normal, sin force). `CONTEXTO.md` quedó en la raíz. `index.html` publicado: **27652** bytes sin comprimir, Brotli calidad 11: **9415** bytes. Pages no quedó encendido: `POST /repos/loconluis/chapinvilla/pages` con `source.branch=main` y `source.path=/` respondió **403** (`pages=write` y `administration=write`; el token de la integración no los tiene). `has_pages` sigue en false. https://loconluis.github.io/chapinvilla/ responde **301** a http://resume.luislocon.dev/chapinvilla/ porque el sitio de usuario `loconluis/loconluis.github.io` tiene CNAME `resume.luislocon.dev`. Ese host apunta a Vercel (no a las IP de GitHub Pages) y `/chapinvilla` da 404. Aunque alguien encienda Pages en Settings → Deploy from a branch → `main` → `/ (root)`, GitHub va a servir el proyecto bajo ese dominio heredado, salvo que se quite el CNAME del sitio de usuario o este repo tenga su propio dominio.
