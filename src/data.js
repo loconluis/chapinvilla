@@ -204,6 +204,16 @@ export const SPRITES = {
 ............
 ............
 `),
+  columna: S(`
+.0000000000.
+.0444444440.
+.0445555440.
+.0445555440.
+.0445555440.
+.0445555440.
+.0444444440.
+.0000000000.
+`),
   peaton: S(`
 ......000......
 .....0555550...
@@ -228,6 +238,9 @@ export const OBSTACLES = {
   cambia: { h: 24, dmg: 18, stress: 14, slides: true },
   bus: { h: 34, dmg: 30, stress: 18 },
   peaton: { h: 20, dmg: 12, stress: 16 },
+  // Del parqueo: nadie se mueve, el castigo es por tamaño.
+  auto: { h: 24, dmg: 18, stress: 14 },
+  columna: { h: 13, dmg: 22, stress: 18 },
 };
 
 /** gasolina llena el tanque; el café da velocidad, no combustible. */
@@ -270,26 +283,14 @@ export const LINES = {
     "Todavía no hay turbo",
     "Dejá que cargue, vos",
   ],
-  suerte: [
-    "Hoy sí hubo suerte",
-    "Pasaste. Seguí, seguí",
-  ],
-  gasolina: [
-    "Tanque lleno, otra vez",
-    "Gasolina y fe, lo único que hace falta",
-  ],
-  cafe: [
-    "Café chapín. Ahora sí",
-    "Eso despierta hasta el tráfico",
-  ],
-  tamal: [
-    "Tamal de emergencia",
-    "Volvió un poco de paciencia",
-  ],
+  gasolina: ["Tanque lleno, otra vez"],
+  cafe: ["Café chapín. Ahora sí"],
+  tamal: ["Tamal de emergencia"],
   boss: [
     "El tráfico eterno",
     "Ahí vienen, ocupando dos carriles",
   ],
+  suerte: ["Hoy sí hubo suerte"],
   win: ["Llegaste. No preguntés cómo"],
 };
 
@@ -337,6 +338,51 @@ export const LEVELS = [
       [2, 4, 2, 5],
     ],
     minPick: { gasolina: 8, cafe: 3, tamal: 3 },
+  },
+  {
+    id: 2,
+    name: "El parqueo",
+    dest: "un espacio libre",
+    home: "Build & Pitch",
+    depart: 8 * 60,
+    // el pitch arranca a las 9:00 en punto: si llegás tarde, te queda menos tiempo
+    fixedUntil: 9 * 60,
+    timeLimit: 60,
+    // cuánto se llena: de las 7:20 a las 8:20 el estacionamiento se va tapando
+    fillFrom: 7 * 60 + 20,
+    fillSpan: 60,
+    rampEvery: 20,
+    ramp: 1.04,
+    rampCap: 1.15,
+    bossCap: 1.05,
+    baseSpeed: 62,
+    drain: 0.4,
+    stressDecay: 1.1,
+    turboCost: 40,
+    turboGain: 11,
+    turboDodge: 10,
+    boostMul: 1.7,
+    boostTime: 0.8,
+    startEnergy: 84,
+    length: 5200,
+    gap0: 235,
+    gap1: 130,
+    boss: { name: "La última hilera", at: 0.78, waves: 3, gap: 200 },
+    obstacles: ["camioneta", "auto", "columna"],
+    pickups: ["gasolina", "cafe", "tamal"],
+    crossings: 6,
+    crossBonus: 12,
+    dodgePoint: 3,
+    hitPenalty: 15,
+    earlyPoint: 6,
+    motoFactor: 0.5,
+    phases: [
+      [4, 3, 3],
+      [3, 3, 4],
+      [2, 4, 4],
+    ],
+    minPick: { gasolina: 4, cafe: 2, tamal: 2 },
+    park: 1,
   },
 ];
 

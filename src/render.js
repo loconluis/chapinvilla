@@ -121,7 +121,7 @@ function drawCity(ctx, z, seed) {
   }
 }
 
-function drawRoad(ctx, viewZ) {
+function drawRoad(ctx, viewZ, park) {
   ctx.fillStyle = PAL[5];
   ctx.fillRect(ROAD_PX - 12, 0, 12, H);
   ctx.fillRect(ROAD_PX + ROAD_WPX, 0, 12, H);
@@ -132,11 +132,15 @@ function drawRoad(ctx, viewZ) {
   ctx.fillRect(ROAD_PX + ROAD_WPX - 3, 0, 3, H);
   ctx.fillStyle = PAL[5];
   const first = Math.floor((viewZ - 200) / 32) * 32;
+  // En el parqueo las rayas son divisiones de espacios (perpendiculares);
+  // en la calle son líneas de carril. Un bucle, dos lecturas.
   for (let dz = first; dz < viewZ + 40; dz += 32) {
     const y = worldY(viewZ, dz);
     if (y < -30 || y > H) continue;
-    ctx.fillRect(ROAD_PX + LANE_PX - 2, y, 3, 18);
-    ctx.fillRect(ROAD_PX + LANE_PX * 2 - 2, y, 3, 18);
+    for (let l = park ? 0 : 1; l < 3; l++) {
+      if (park) ctx.fillRect(ROAD_PX + LANE_PX * l + 3, y, LANE_PX - 6, 3);
+      else ctx.fillRect(ROAD_PX + LANE_PX * l - 2, y, 3, 18);
+    }
   }
 }
 
@@ -159,6 +163,8 @@ const SPR = {
   camioneta: "camioneta",
   motorista: "motorista",
   hoyo: "hoyo",
+  auto: "car",
+  columna: "columna",
   cambia: "car",
   bus: "bus",
   gasolina: "gasolina",
@@ -218,7 +224,7 @@ export function render(ctx, run, dt, mode, deco) {
   ctx.save();
   ctx.translate(sx, sy);
   drawCity(ctx, viewZ, run.seed);
-  drawRoad(ctx, viewZ);
+  drawRoad(ctx, viewZ, run.level.park);
   drawCrosswalks(ctx, run, viewZ);
 
   const ents = run.ents;
@@ -271,16 +277,20 @@ export function render(ctx, run, dt, mode, deco) {
   const near = run.finish - viewZ;
   if (near < 145 && near > -30) {
     const gy = worldY(viewZ, run.finish);
-    ctx.fillStyle = PAL[1];
-    ctx.fillRect(ROAD_PX + 3, gy - 39, 6, 42);
-    ctx.fillRect(ROAD_PX + ROAD_WPX - 9, gy - 39, 6, 42);
-    ctx.fillStyle = PAL[2];
-    ctx.fillRect(ROAD_PX, gy, ROAD_WPX, 5);
-    ctx.fillStyle = PAL[5];
-    ctx.font = "700 12px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText(run.level.dest, ROAD_PX + ROAD_WPX / 2, gy - 6);
+    const park = run.level.park;
+    // En el parqueo no hay meta: hay un espacio pintado en el piso.
+    ctx.fillStyle = park ? PAL[5] : PAL[1];
+    ctx.fillRect(ROAD_PX + 10, gy - 40, 6, 46);
+    ctx.fillRect(ROAD_PX + ROAD_WPX - 16, gy - 40, 6, 46);
+    ctx.fillStyle = park ? PAL[5] : PAL[2];
+    ctx.fillRect(ROAD_PX + (park ? 10 : 0), gy + (park ? 4 : 0), ROAD_WPX - (park ? 20 : 0), 5);
+    if (!park) {
+      ctx.fillStyle = PAL[5];
+      ctx.font = "700 12px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(run.level.dest, ROAD_PX + ROAD_WPX / 2, gy - 6);
+    }
   }
 
   if (run.boost > 0 && mode === "play") {

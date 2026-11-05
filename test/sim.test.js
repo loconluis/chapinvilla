@@ -19,7 +19,7 @@ test("sprites son matrices compactas", () => {
 });
 
 test("nivel 1 es dato, no un caso especial", () => {
-  assert.equal(LEVELS.length, 1);
+  assert.equal(LEVELS.length, 2);
   const level = LEVELS[0];
   assert.equal(level.name, "La hora pico");
   assert.equal(level.obstacles.length, 4);
@@ -313,6 +313,38 @@ test("un piloto atento llega y quedarse quieto no", () => {
     if (!run.won) afkLosses++;
   }
   assert.ok(afkLosses >= 8, "afk losses " + afkLosses);
+});
+
+test("el parqueo se llena según la hora a la que llegás", () => {
+  const L = LEVELS[1];
+  const solids = (run) => run.ents.filter((e) => !e.pickup).length;
+  const temprano = createRun(7, L, 7 * 60 + 20);
+  const medio = createRun(7, L, 7 * 60 + 50);
+  const tarde = createRun(7, L, 8 * 60 + 15);
+  assert.ok(solids(medio) > solids(temprano), "a las 7:50 hay más autos que a las 7:20");
+  assert.ok(solids(tarde) > solids(medio), "a las 8:15 hay más autos que a las 7:50");
+  // y cuanto más tarde, menos tiempo: el pitch arranca a las 9:00 igual para todos
+  assert.ok(tarde.limit < medio.limit && medio.limit < temprano.limit, "el plazo se acorta");
+  for (const run of [temprano, medio, tarde]) {
+    assert.equal(run.origin.depart + run.limit, L.fixedUntil, "todos corren hasta las 9:00");
+  }
+  // misma semilla y misma hora, misma playa
+  assert.equal(sig(createRun(7, L, 500)), sig(createRun(7, L, 500)));
+  assert.notEqual(sig(createRun(7, L, 460)), sig(createRun(7, L, 500)));
+});
+
+test("el parqueo se puede ganar, incluso llegando tarde", () => {
+  const L = LEVELS[1];
+  for (const arrived of [7 * 60 + 30, 8 * 60, 8 * 60 + 20]) {
+    let wins = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const run = play(seed, fueled(yielding(choose)), L, arrived);
+      if (run.won) wins++;
+      else assert.fail("llegando " + arrived + " seed " + seed + " " + run.reason + " z " + Math.round(run.z) + "/" + run.finish);
+      assert.ok(run.t < run.limit, "seed " + seed + " se pasó del plazo");
+    }
+    assert.equal(wins, 10);
+  }
 });
 
 test("el fuente no pide nada por la red", () => {

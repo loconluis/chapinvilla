@@ -35,22 +35,22 @@ const LOSE = {
   energy: "Se acabó la gasolina y la moto se paró.",
 };
 const FIRST = {
-  gasolina: "Gasolina: llenó el tanque. Sin esto la moto se para.",
-  cafe: "Café: te dio velocidad por un rato. Llegar antes vale más puntos.",
-  tamal: "Tamal: bajó el estrés. Con el estrés alto el tanque se vacía más rápido.",
+  gasolina: "Gasolina: llena el tanque. Sin esto, la moto se para.",
+  cafe: "Café: te da velocidad. Llegar antes vale más.",
+  tamal: "Tamal: baja el estrés, y el estrés chupa el tanque.",
 };
 const SEE = {
   peaton: "Peatón en el paso. Frená en su carril y dejalo pasar: da puntos.",
 };
 const BOOST = "Turbo lleno. Esquivar lo recarga: ACELERA cuando esté listo.";
 const HIT = {
-  camioneta: "Camioneta: baja energía y sube estrés.",
-  motorista: "Motorista: baja energía y sube estrés.",
-  hoyo: "Hoyo: baja energía y sube mucho el estrés.",
-  cambia: "Se mete a tu carril: baja energía y sube estrés.",
-  bus: "Bus: tapa dos carriles, baja energía y sube estrés.",
-  peaton: "Peatón: lo atropellaste. Sin puntos. Baja energía y sube estrés.",
+  hoyo: "baja energía y sube mucho el estrés",
+  cambia: "se mete a tu carril; baja energía y sube estrés",
+  bus: "tapa dos carriles; baja energía y sube estrés",
+  peaton: "lo atropellaste. Sin puntos; baja energía y sube estrés",
 };
+/** El aviso sale del id: "Auto: baja energía y sube estrés." */
+const hitText = (id) => id[0].toUpperCase() + id.slice(1) + ": " + (HIT[id] || "baja energía y sube estrés") + ".";
 const told = {};
 
 let save = loadSave();
@@ -68,9 +68,10 @@ let nowT = 0;
 function loadSave() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
-    return { best: s.best | 0, mute: s.mute === true };
+    // los guardados viejos tenían un solo número: era el del nivel 1
+    return { best: typeof s.best === "number" ? { 1: s.best | 0 } : s.best || {}, mute: s.mute === true };
   } catch {
-    return { best: 0, mute: false };
+    return { best: {}, mute: false };
   }
 }
 
@@ -209,25 +210,25 @@ function showStart() {
   screen(null, [
     ["", "Desde " + run.origin.name + " hasta " + L.dest + ". Llegá antes de las " + deadlineOf(run) + "."],
     ["bd", row("Esquivar", L.dodgePoint) + "\n" + row("Peatón", L.crossBonus) + "\n" + row("Chocar", -L.hitPenalty)],
-    ["", "Salís a las 5:00 y el tráfico va subiendo. Llegá antes de las 8:00."],
     ["", "Llegar antes y con el tanque entero suma más."],
-    ["", "Récord: " + save.best + " puntos"],
+    ["", "Récord: " + bestOf(run.level) + " puntos"],
     ["hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa."],
-  ], btn("JUGAR", startPlay));
+  ], btn("JUGAR", () => startPlay(0)));
 }
 
-function startPlay() {
+function startPlay(i = 0, arrived) {
   unlock();
   sfx("start");
   resetHumor();
   clearFx();
-  run = createRun(run.seed, LEVELS[0]);
+  run = createRun(run.seed, LEVELS[i], arrived);
   targetLane = 1;
   boostPulse = false;
   brakePulse = false;
   acc = 0;
   jokeLock = 0;
   mode = "play";
+  tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
   clearPanel();
   pauseBtn.hidden = false;
   pauseBtn.textContent = "PAUSA";
@@ -260,14 +261,23 @@ function togglePause() {
   else if (mode === "pause") resume();
 }
 
+function bestOf(level) {
+  return save.best[level.id] || 0;
+}
+
 function commitScore() {
   const s = Math.floor(run.score);
-  const beat = s > save.best;
+  const beat = s > bestOf(run.level);
   if (beat) {
-    save.best = s;
+    save.best[run.level.id] = s;
     writeSave();
   }
   return beat;
+}
+
+/** La hora a la que llegaste: con eso se decide qué tan lleno está el parqueo. */
+function arrival() {
+  return run.origin.depart + Math.floor(run.t);
 }
 
 function showWin(ev) {
@@ -280,8 +290,13 @@ function showWin(ev) {
     ["bd", breakdown(ev.early)],
     ["total", run.score + " PUNTOS"],
     ["rank", rankOf(run.score)],
-    ["hint", beat ? "¡Nuevo récord!" : "Récord: " + save.best + " puntos"],
-  ], bar(btn("OTRA VEZ", again), btn("RETAR A UN CUATE", () => challenge(), true)));
+    ["hint", beat ? "¡Nuevo récord!" : "Récord: " + bestOf(run.level) + " puntos"],
+  ], bar(
+    run.level.id < LEVELS.length
+      ? btn("AL PARQUEO", () => startPlay(run.level.id, arrival()))
+      : btn("OTRA VEZ", again),
+    btn("RETAR A UN CUATE", () => challenge(), true)
+  ));
 }
 
 function showLose() {
@@ -296,14 +311,15 @@ function showLose() {
       : LOSE[run.reason] || "El tráfico pudo más."],
     ["bd", breakdown(0)],
     ["total", run.score + " PUNTOS"],
-    ["hint", (beat ? "¡Nuevo récord! " : "") + "Récord: " + save.best + " puntos"],
+    ["hint", (beat ? "¡Nuevo récord! " : "") + "Récord: " + bestOf(run.level) + " puntos"],
   ], bar(btn("OTRA VEZ", again), btn("RETAR A UN CUATE", () => challenge(), true)));
 }
 
 function again() {
+  const level = run.level;
   unlock();
-  run = createRun(run.seed, LEVELS[0]);
-  startPlay();
+  run = createRun(run.seed, level);
+  startPlay(LEVELS.indexOf(level));
 }
 
 async function challenge() {
@@ -327,21 +343,8 @@ async function challenge() {
     setJoke("Copiado. Mandáselo a tu cuate.");
     return;
   } catch {
-    /* el navegador no prestó el portapapeles */
+    setJoke(full);
   }
-  const ta = document.createElement("textarea");
-  ta.value = full;
-  ta.setAttribute("readonly", "");
-  document.body.appendChild(ta);
-  ta.select();
-  let ok = false;
-  try {
-    ok = document.execCommand("copy");
-  } catch {
-    ok = false;
-  }
-  ta.remove();
-  setJoke(ok ? "Copiado. Mandáselo a tu cuate." : full);
 }
 
 function handle(events) {
@@ -353,12 +356,12 @@ function handle(events) {
       burst(laneX(ev.lane), worldY(run.z, ev.z), 3, 7);
       pop(laneX(ev.lane), worldY(run.z, ev.z) - 12, "-" + ev.n, 3);
       const key = ev.id === "peaton" ? "peaton-hit" : ev.id;
-      if (!teach(key, HIT[ev.id])) say(ev.id);
+      if (!teach(key, hitText(ev.id))) say(ev.id);
     } else if (ev.k === "pick") {
       sfx(ev.id);
       burst(laneX(ev.lane), worldY(run.z, ev.z), 5, 5);
       if (!teach(ev.id, FIRST[ev.id])) say(ev.id);
-    } else if (ev.k === "seen") teach(ev.id, SEE[ev.id] || HIT[ev.id]);
+    } else if (ev.k === "seen") teach(ev.id, SEE[ev.id] || hitText(ev.id));
     else if (ev.k === "dodge") {
       pop(laneX(ev.lane), worldY(run.z, ev.z) - 12, "+" + ev.n, 2);
     } else if (ev.k === "yield") {
@@ -394,7 +397,7 @@ function consume() {
 function hud() {
   fillE.style.width = Math.max(0, Math.min(100, run.energy)) + "%";
   fillS.style.width = Math.max(0, Math.min(100, run.stress)) + "%";
-  const left = Math.max(0, 1 - run.t / run.level.timeLimit);
+  const left = Math.max(0, 1 - run.t / run.limit);
   fillT.style.width = left * 100 + "%";
   clockEl.textContent = clockOf(run);
   qEl.textContent = String(run.score | 0);

@@ -41,7 +41,7 @@ export function clockOf(run) {
 }
 
 export function deadlineOf(run) {
-  return formatClock(run.origin.depart + run.level.timeLimit);
+  return formatClock(run.origin.depart + run.limit);
 }
 
 /** Rango del puntaje. De mayor a menor en RANKS. */
@@ -182,7 +182,7 @@ function placePickup(ents, id, z, rng) {
   return false;
 }
 
-function generate(level, rng) {
+function generate(level, rng, fill = 0) {
   const ents = [];
   const bossAt = Math.floor(level.length * level.boss.at);
   let z = 300;
@@ -190,7 +190,8 @@ function generate(level, rng) {
   let first = true;
   while (guard++ < 600) {
     const d = z / level.length;
-    const gap = level.gap0 + (level.gap1 - level.gap0) * d;
+    // el estacionamiento lleno achica los huecos entre autos parqueados
+    const gap = (level.gap0 + (level.gap1 - level.gap0) * d) * (1 - 0.45 * fill);
     if (z + gap > bossAt - 220) break;
     z += gap;
     const phase = d < 0.34 ? 0 : d < 0.67 ? 1 : 2;
@@ -247,11 +248,14 @@ function generate(level, rng) {
   return { ents, bossAt, finish: bz + 160 };
 }
 
-export function createRun(seed, level = LEVELS[0]) {
+export function createRun(seed, level = LEVELS[0], arrived) {
   const s = seed >>> 0;
   const rng = mulberry32(s);
-  const origin = { name: level.home, depart: level.depart };
-  const world = generate(level, rng);
+  const origin = { name: level.home, depart: arrived ?? level.depart };
+  // Cuánto se llenó el estacionamiento: llegás a las 7:30 y está vacío,
+  // a las 8:20 ya no cabe un carro. Sale de la hora a la que llegaste.
+  const fill = arrived == null ? 0.5 : clamp((arrived - level.fillFrom) / level.fillSpan, 0, 1);
+  const world = generate(level, rng, fill);
   return {
     seed: s,
     level,
@@ -259,6 +263,8 @@ export function createRun(seed, level = LEVELS[0]) {
     ents: world.ents,
     bossAt: world.bossAt,
     finish: world.finish,
+    // el plazo puede ser fijo (el pitch arranca a las 9:00) o relativo al nivel
+    limit: level.fixedUntil ? level.fixedUntil - origin.depart : level.timeLimit,
     z: 0,
     lane: 1,
     laneT: 1,
@@ -404,7 +410,7 @@ export function step(run, input, dt) {
     run.bossSaid = true;
     events.push({ k: "boss" });
   }
-  if (!run.warnedTime && run.t >= level.timeLimit - 18) {
+  if (!run.warnedTime && run.t >= run.limit - 18) {
     run.warnedTime = true;
     events.push({ k: "time" });
   }
@@ -416,7 +422,7 @@ export function step(run, input, dt) {
 
   if (run.z >= run.finish) {
     run.won = true;
-    const early = Math.max(0, level.timeLimit - run.t);
+    const early = Math.max(0, run.limit - run.t);
     run.pt = Math.round(early * level.earlyPoint);
     run.pm = Math.round(run.energy * level.motoFactor);
     run.score += run.pt + run.pm;
@@ -429,7 +435,7 @@ export function step(run, input, dt) {
     events.push({ k: "lose", reason: "energy" });
     return events;
   }
-  if (run.t >= level.timeLimit) {
+  if (run.t >= run.limit) {
     run.alive = false;
     run.reason = "time";
     events.push({ k: "lose", reason: "time" });
