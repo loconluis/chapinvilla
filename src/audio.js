@@ -6,7 +6,6 @@ let ac = null;
 let master = null;
 let engine = null;
 let engineGain = null;
-let noiseBuf = null;
 let muted = false;
 let kickEl = null;
 let kicked = false;
@@ -51,21 +50,6 @@ function tone(freq, dur, type, gain, slide) {
   o.stop(t0 + dur + 0.02);
 }
 
-function noise() {
-  if (!ac || !noiseBuf) return;
-  const src = ac.createBufferSource();
-  src.buffer = noiseBuf;
-  const g = ac.createGain();
-  const f = ac.createBiquadFilter();
-  f.type = "highpass";
-  f.frequency.value = 180;
-  g.gain.value = 0.24;
-  src.connect(f);
-  f.connect(g);
-  g.connect(master);
-  src.start();
-}
-
 export function unlock() {
   kickHtml();
   if (!ac) {
@@ -83,12 +67,6 @@ export function unlock() {
     engine.connect(engineGain);
     engineGain.connect(master);
     engine.start();
-    const n = ac.createBuffer(1, (ac.sampleRate * 0.25) | 0, ac.sampleRate);
-    const d = n.getChannelData(0);
-    for (let i = 0; i < d.length; i++) {
-      d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-    }
-    noiseBuf = n;
   }
   if (ac.state === "suspended") ac.resume();
 }
@@ -100,7 +78,7 @@ export function setMuted(m) {
 
 export function sfx(kind) {
   if (!ac || muted) return;
-  if (kind === "hit") noise();
+  if (kind === "hit") tone(90, 0.2, "square", 0.12, 130);
   // Un solo sonido para los tres objetos: cambia el objeto, no el gesto de agarrar.
   else if (kind === "cafe" || kind === "tamal" || kind === "gasolina") {
     tone(523, 0.08, "square", 0.08);

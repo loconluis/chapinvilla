@@ -42,6 +42,7 @@ const FIRST = {
 };
 const SEE = {
   peaton: "Peatón en el paso. Frená en su carril: deja pasar y da puntos.",
+  libre: PARK,
 };
 const PARK = "Espacio libre. Ponte en ese carril y frená para entrar.";
 const BOOST = "Turbo lleno. Esquivar lo recarga: ACELERA cuando esté listo.";
@@ -215,7 +216,7 @@ function showStart() {
     ["", "Llegar antes y con el tanque entero suma más."],
     ["", "Récord: " + bestOf(run.level) + " puntos"],
     ["hint", "Flechas o A D · Espacio acelera · S frena · Esc pausa."],
-  ], btn("JUGAR", () => startPlay(0)));
+  ], btn("JUGAR", () => startPlay(LEVELS.indexOf(run.level))));
 }
 
 function startPlay(i = 0, arrived) {
@@ -377,7 +378,7 @@ function handle(events) {
     }
     else if (ev.k === "block") say("camioneta");
     else if (ev.k === "luck") say("suerte");
-    else if (ev.k === "boss") run.level.park ? teach("park", PARK) : say("boss");
+    else if (ev.k === "boss") say("boss");
     else if (ev.k === "need") say("turbo");
     else if (ev.k === "low") say("energia");
     else if (ev.k === "time") say("tiempo");
@@ -493,6 +494,13 @@ document.getElementById("bL").addEventListener("pointerdown", (e) => {
 document.getElementById("bR").addEventListener("pointerdown", (e) => {
   e.preventDefault();
   targetLane = Math.min(2, targetLane + 1);
+});
+document.getElementById("bB").addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  brakePulse = true;
+});
+document.getElementById("info").addEventListener("click", () => {
+  if (mode === "play" || mode === "pause") showStart();
 });
 document.getElementById("bA").addEventListener("pointerdown", (e) => {
   e.preventDefault();

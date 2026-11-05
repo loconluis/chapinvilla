@@ -232,6 +232,10 @@ function generate(level, rng, fill = 0) {
     pz += 640;
     if (pz > bossAt - 300) pz = 520 + spins * 29;
   }
+  // Espacios libres repartidos: hay que ir leyendo la hilera.
+  const spots = level.libres || 0;
+  for (let i = 0; i < spots; i++) placeSolid(ents, "libre", bossAt * (0.42 + i * 0.22), rng);
+
   let bz = bossAt;
   let prev = -1;
   for (let w = 0; w < level.boss.waves; w++) {
@@ -245,8 +249,7 @@ function generate(level, rng, fill = 0) {
     bz += level.boss.gap;
   }
   ents.sort((a, b) => a.z - b.z);
-  // El carril que quedó abierto en la última hilera es el espacio libre.
-  return { ents, bossAt, finish: bz + 160, finishLane: prev };
+  return { ents, bossAt, finish: bz + 160 };
 }
 
 export function createRun(seed, level = LEVELS[0], arrived) {
@@ -264,7 +267,6 @@ export function createRun(seed, level = LEVELS[0], arrived) {
     ents: world.ents,
     bossAt: world.bossAt,
     finish: world.finish,
-    finishLane: world.finishLane,
     // el plazo puede ser fijo (el pitch arranca a las 9:00) o relativo al nivel
     // el plazo se acorta si llegás tarde, pero nunca baja de 60 s: perder por reloj sin jugar no es un nivel
     limit: level.fixedUntil ? Math.max(60, level.fixedUntil - origin.depart) : level.timeLimit,
@@ -397,6 +399,15 @@ export function step(run, input, dt) {
     if (dz < -8 || dz > 200) continue;
     const eLane = occupied(laneAt(e, run.z));
     if (eLane !== pLane || !yOverlap(run, e)) continue;
+    // El espacio libre no se esquiva: se entra frenando en su carril.
+    if (e.id === "libre") {
+      if (run.slow > 0) {
+        e.dead = true;
+        park(run, events);
+        return events;
+      }
+      continue;
+    }
     if (e.pickup) {
       e.dead = true;
       if (e.energy) run.energy = Math.min(100, run.energy + e.energy);
@@ -434,11 +445,6 @@ export function step(run, input, dt) {
   }
   if (run.energy > 42) run.warnedEnergy = false;
 
-  const atSpot = run.finish - run.z;
-  if (level.park && atSpot < 70 && atSpot > -10 && run.slow > 0 && occupied(run.laneT) === run.finishLane) {
-    park(run, events);
-    return events;
-  }
   if (run.z >= run.finish) {
     // En el parqueo, llegar al final sin haberte metido es quedarte sin dónde.
     if (level.park) {

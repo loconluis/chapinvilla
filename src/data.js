@@ -214,6 +214,17 @@ export const SPRITES = {
 .0444444440.
 .0000000000.
 `),
+  libre: S(`
+55555555555555555555
+5..................5
+5..................5
+5..................5
+5..................5
+5..................5
+5..................5
+5..................5
+5..................5
+5..................5`),
   peaton: S(`
 ......000......
 .....0555550...
@@ -240,6 +251,8 @@ export const OBSTACLES = {
   peaton: { h: 20, dmg: 12, stress: 16 },
   // Del parqueo: nadie se mueve, el castigo es por tamaño.
   columna: { h: 13, dmg: 22, stress: 18 },
+  // Un espacio libre no golpea: se entra frenando.
+  libre: { h: 26, dmg: 0, stress: 0 },
 };
 
 /** gasolina llena el tanque; el café da velocidad, no combustible. */
@@ -359,6 +372,8 @@ export const LEVELS = [
     ],
     minPick: { gasolina: 4, cafe: 2, tamal: 2 },
     park: 1,
+    // Tres espacios repartidos: el que encontrás primero es el que te da la partida.
+    libres: 3,
   },
 ];
 

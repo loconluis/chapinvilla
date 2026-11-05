@@ -493,9 +493,29 @@ function sloppyOf(inner, seed) {
   };
 }
 
-/** Piloto que maneja bien y, al final, se pone en el carril del espacio y frena. */
-const parker = (r) =>
-  r.finish - r.z < 26 ? { lane: r.finishLane, brake: true } : fueled(yielding(choose))(r);
+/** El espacio libre más cercano adelante. */
+function spotAhead(r) {
+  let best = null;
+  let bd = Infinity;
+  for (const e of r.ents) {
+    if (e.id !== "libre" || e.dead) continue;
+    const dz = e.z - r.z;
+    if (dz < -20 || dz > 150 || dz >= bd) continue;
+    bd = dz;
+    best = e;
+  }
+  return best ? { spot: best, dz: bd } : null;
+}
+
+/** Piloto que maneja bien y, cuando puede, se mete al espacio frenando. */
+function parker(r) {
+  const near = spotAhead(r);
+  if (near) {
+    if (near.dz < 28) return { lane: near.spot.lane, brake: true };
+    if (hazard(r, near.spot.lane) < 220) return { lane: near.spot.lane, brake: false };
+  }
+  return fueled(yielding(choose))(r);
+}
 
 function play(seed, policy, level = LEVELS[0], arrived) {
   const run = createRun(seed, level, arrived);

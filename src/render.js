@@ -102,13 +102,9 @@ function drawCity(ctx, z, seed) {
         const body = [4, 6, 5, 1][hsh % 4];
         ctx.fillStyle = PAL[body];
         ctx.fillRect(x, y - bh, bw, bh);
-        ctx.fillStyle = PAL[body === 5 || body === 1 ? 6 : 2];
-        for (let wy = y - bh + 6; wy < y - 9; wy += 12) {
-          for (let wx = x + 4; wx < x + bw - 6; wx += 9) {
-            if ((hsh + wx + wy) % 5 === 0) continue;
-            ctx.fillRect(wx, wy, 4, 4);
-          }
-        }
+        // Un solo bucle: las ventanas son franjas oscuras, no una reja de píxeles.
+        ctx.fillStyle = PAL[0];
+        for (let wy = y - bh + 8; wy < y - 8; wy += 13) ctx.fillRect(x + 5, wy, bw - 10, 3);
       }
     }
   }
@@ -156,6 +152,7 @@ const SPR = {
   camioneta: "camioneta",
   motorista: "motorista",
   hoyo: "hoyo",
+  libre: "libre",
   columna: "columna",
   cambia: "car",
   bus: "bus",
@@ -255,7 +252,7 @@ export function render(ctx, run, dt, mode, deco) {
     const y = worldY(viewZ, e.z) + bob;
     const key = SPR[e.id];
     if (!key) continue;
-    const box = blit(ctx, SPRITES[key], x, y, e.id !== "hoyo");
+    const box = blit(ctx, SPRITES[key], x, y, e.id !== "hoyo" && e.id !== "libre");
     if (e.pickup) frame(ctx, box);
     if (e.id === "cambia" && ((run.t * 8) | 0) % 2 === 0 && e.laneTo != null) {
       const dir = e.laneTo > e.lane ? 1 : -1;
@@ -269,17 +266,7 @@ export function render(ctx, run, dt, mode, deco) {
   const near = run.finish - viewZ;
   if (near < 145 && near > -30) {
     const gy = worldY(viewZ, run.finish);
-    if (run.level.park) {
-      // Un solo espacio libre, en un solo carril. Las otras dos hileras están tapadas.
-      const x = ROAD_PX + LANE_PX * run.finishLane;
-      ctx.fillStyle = PAL[5];
-      ctx.fillRect(x + 2, gy - 40, 6, 46);
-      ctx.fillRect(x + LANE_PX - 10, gy - 40, 6, 46);
-      ctx.fillRect(x + 2, gy + 2, LANE_PX - 10, 5);
-      ctx.fillStyle = PAL[6];
-      ctx.fillRect(ROAD_PX, gy - 6, LANE_PX * run.finishLane, 12);
-      ctx.fillRect(x + LANE_PX, gy - 6, ROAD_WPX - LANE_PX * (run.finishLane + 1), 12);
-    } else {
+    if (!run.level.park) {
       ctx.fillStyle = PAL[1];
       ctx.fillRect(ROAD_PX + 3, gy - 39, 6, 42);
       ctx.fillRect(ROAD_PX + ROAD_WPX - 9, gy - 39, 6, 42);
