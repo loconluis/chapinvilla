@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { DECODER, decode, pack } from "../scripts/pack.js";
 import { SPRITES } from "../src/data.js";
@@ -33,6 +33,7 @@ test("el arte no usa el índice 7: es el aire empaquetado", () => {
 });
 
 test("el build publica un solo archivo y no lleva el ASCII del arte", () => {
+  assert.ok(existsSync("dist"), "falta dist/: corré npm run build antes que npm test");
   const dist = readdirSync("dist");
   assert.deepEqual(dist, ["index.html"]);
   const html = readFileSync("dist/index.html", "utf8");
