@@ -2,7 +2,7 @@
 
 La vida es difícil. El juego también.
 
-Arcade de una sola pantalla para el nivel 1, **La hora pico**: salís en moto de Villa Nueva, Mixco, Antigua o zona 18 y tenés que llegar a la UVG antes de que se acabe el tiempo. El link `?viaje=` repite la misma calle.
+Arcade de una sola pantalla para el nivel 1, **La hora pico**: salís en moto desde tu casa y tenés que llegar a Build & Pitch antes de que se acabe el tiempo, sin quedarte sin energía y sin llenar el estrés. El link `?viaje=` repite la misma calle; no cambia el lugar.
 
 ## Jugar
 
@@ -40,5 +40,5 @@ En la web: Settings → Pages → Deploy from a branch → `main` → `/ (root)`
 
 Hecho con Node 22, Brotli calidad 11:
 
-- sin comprimir: 27652 bytes
-- Brotli: 9415 bytes
+- sin comprimir: 28890 bytes
+- Brotli: 9761 bytes

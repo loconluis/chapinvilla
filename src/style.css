@@ -59,12 +59,14 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
+#barS { color: #E66A45; }
 #hud b {
   display: block;
-  height: 10px;
+  height: 12px;
   background: #282B35;
   border: 2px solid #247C68;
   box-sizing: border-box;
@@ -73,7 +75,7 @@ h1 {
 #barS i { background: #E66A45; }
 #barT i { background: #5B83A6; }
 #barS.hot b { border-color: #E66A45; }
-#clock { color: #E5B94B; font-size: 12px; }
+#clock { color: #E5B94B; font-size: 14px; font-style: normal; }
 #q {
   color: #E5B94B;
   font-size: 20px;

@@ -31,8 +31,13 @@ const KEY = "chapinvilla.v1";
 const STEP = 1 / 60;
 const LOSE = {
   energy: "La moto se quedó sin café.",
-  time: "Se hizo la hora y la UVG sigue lejos.",
 };
+const FIRST = {
+  cafe: "Café: subió la energía.",
+  tamal: "Tamal: bajó el estrés y subió un poco la energía.",
+  quetzal: "Quetzales: subió el puntaje.",
+};
+const told = {};
 
 let save = loadSave();
 let mode = "start";
@@ -49,7 +54,7 @@ let nowT = 0;
 function loadSave() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || "{}");
-    return { best: s.best | 0, mute: !!s.mute };
+    return { best: s.best | 0, mute: s.mute === true };
   } catch {
     return { best: 0, mute: false };
   }
@@ -110,18 +115,22 @@ function clearPanel() {
 function showStart() {
   mode = "start";
   clearPanel();
-  const p1 = document.createElement("p");
-  p1.textContent = "Hoy salís de: " + run.origin.name;
-  const p2 = document.createElement("p");
-  p2.textContent = "Destino: UVG · tenés hasta las " + deadlineOf(run);
-  const p3 = document.createElement("p");
-  p3.textContent = "Récord: Q" + save.best;
+  const goal = document.createElement("p");
+  goal.textContent =
+    "Desde " + run.origin.name + " hasta " + run.level.dest +
+    ". Llegá antes de las " + deadlineOf(run) +
+    ", sin quedarte sin energía y sin que el estrés llegue al máximo.";
+  const items = document.createElement("p");
+  items.textContent =
+    "Café sube la energía. Tamal baja el estrés y da un poco de energía. Quetzales suman puntos. Si el estrés se llena, la energía baja más rápido.";
+  const rec = document.createElement("p");
+  rec.textContent = "Récord: Q" + save.best;
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = "Flechas o A D · Espacio acelera · S frena · Esc pausa. En el teléfono, deslizá.";
-  panel.append(p1, p2, p3, btn("JUGAR", startPlay), hint);
-  tag.textContent = run.level.name + " · " + run.origin.name + " → UVG";
-  setJoke("Tres carriles. Una moto. La UVG al final.");
+  panel.append(goal, items, rec, btn("JUGAR", startPlay), hint);
+  tag.textContent = run.level.name + " · Desde " + run.origin.name + " → " + run.level.dest;
+  setJoke("Tres carriles. Una moto. " + run.level.dest + " al final.");
   pauseBtn.hidden = true;
   fit();
 }
@@ -201,7 +210,7 @@ function showWin() {
   sfx("win");
   clearPanel();
   const h = document.createElement("h2");
-  h.textContent = "Llegaste a la UVG a las " + clockOf(run) + " con Q" + Math.floor(run.q);
+  h.textContent = "Llegaste a " + run.level.dest + " a las " + clockOf(run) + " con Q" + Math.floor(run.q);
   const sub = document.createElement("p");
   sub.textContent = LINES.win[0];
   const rec = document.createElement("p");
@@ -220,7 +229,10 @@ function showLose() {
   const h = document.createElement("h2");
   h.textContent = "No llegaste";
   const sub = document.createElement("p");
-  sub.textContent = LOSE[run.reason] || "El tráfico pudo más.";
+  sub.textContent =
+    run.reason === "time"
+      ? "Se hizo la hora y " + run.level.dest + " sigue lejos."
+      : LOSE[run.reason] || "El tráfico pudo más.";
   const rec = document.createElement("p");
   rec.textContent = (beat ? "¡Nuevo récord! " : "") + "Q" + Math.floor(run.q) + " · récord Q" + save.best;
   panel.append(h, sub, rec, endButtons());
@@ -239,8 +251,8 @@ async function challenge() {
   const url = location.href;
   const text =
     mode === "win"
-      ? "Llegué a la UVG a las " + clockOf(run) + " con Q" + Math.floor(run.q) + ". ¿Vos llegás?"
-      : "No llegué a la UVG. Salí de " + run.origin.name + ". ¿Vos sí podés?";
+      ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + " con Q" + Math.floor(run.q) + ". ¿Vos llegás?"
+      : "No llegué a " + run.level.dest + ". Salí desde mi casa. ¿Vos sí podés?";
   const data = { title: "Chapinvilla", text, url };
   if (navigator.share) {
     try {
@@ -284,7 +296,11 @@ function handle(events) {
     } else if (ev.k === "pick") {
       sfx(ev.id);
       burst(laneX(ev.lane), worldY(run.z, ev.z), ev.id === "quetzal" ? 2 : 5, 5);
-      say(ev.id);
+      if (!told[ev.id] && FIRST[ev.id]) {
+        told[ev.id] = 1;
+        setJoke(FIRST[ev.id]);
+        jokeLock = nowT + 2.2;
+      } else say(ev.id);
     } else if (ev.k === "block") say("camioneta");
     else if (ev.k === "luck") say("suerte");
     else if (ev.k === "boss") say("boss");
@@ -355,16 +371,34 @@ function boot() {
   }
   run = createRun(seed, LEVELS[0]);
   setMuted(save.mute);
-  muteBtn.textContent = save.mute ? "SIN SONIDO" : "SONIDO";
+  paintMute();
   showStart();
+  armAudio();
   requestAnimationFrame(frame);
+}
+
+function paintMute() {
+  muteBtn.textContent = save.mute ? "EN MUDO" : "CON SONIDO";
+  muteBtn.setAttribute("aria-pressed", save.mute ? "true" : "false");
+}
+
+function armAudio() {
+  const go = () => {
+    unlock();
+    removeEventListener("pointerdown", go, true);
+    removeEventListener("touchstart", go, true);
+    removeEventListener("keydown", go, true);
+  };
+  addEventListener("pointerdown", go, true);
+  addEventListener("touchstart", go, true);
+  addEventListener("keydown", go, true);
 }
 
 muteBtn.addEventListener("click", () => {
   unlock();
   save.mute = !save.mute;
   setMuted(save.mute);
-  muteBtn.textContent = save.mute ? "SIN SONIDO" : "SONIDO";
+  paintMute();
   writeSave();
 });
 
