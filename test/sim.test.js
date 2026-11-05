@@ -25,7 +25,10 @@ test("nivel 1 es dato, no un caso especial", () => {
   assert.equal(level.obstacles.length, 4);
   assert.equal(level.pickups.length, 3);
   assert.equal(level.boss.name, "El tráfico eterno");
-  assert.equal(level.origins.length, 4);
+  assert.equal(level.dest, "Build & Pitch");
+  assert.equal(level.home, "tu casa");
+  assert.equal(level.depart, 6 * 60 + 30);
+  assert.equal("origins" in level, false);
   for (const id of level.obstacles) assert.ok(OBSTACLES[id], id);
   for (const id of level.pickups) assert.ok(PICKUPS[id], id);
   assert.equal(level.rampEvery, 15);
@@ -59,7 +62,9 @@ test("el mismo viaje reconstruye la misma calle", () => {
   assert.equal(seedFromQuery(""), null);
   const a = createRun(4821);
   const b = createRun(4821);
-  assert.equal(a.origin.name, "Mixco");
+  assert.equal(a.origin.name, "tu casa");
+  assert.equal(createRun(7).origin.name, "tu casa");
+  assert.equal(a.origin.depart, createRun(7).origin.depart);
   assert.equal(sig(a), sig(b));
   let sa = a;
   let sb = b;
@@ -77,9 +82,10 @@ test("reloj y plazo", () => {
   assert.equal(formatClock(5 * 60 + 50), "5:50");
   assert.equal(formatClock(8 * 60), "8:00");
   const run = createRun(2);
-  assert.equal(run.origin.name, "Antigua");
-  assert.equal(clockOf(run), "5:50");
-  assert.equal(deadlineOf(run), "7:20");
+  assert.equal(run.origin.name, "tu casa");
+  assert.equal(clockOf(run), "6:30");
+  assert.equal(deadlineOf(run), "8:00");
+  assert.equal(createRun(4821).origin.name, run.origin.name);
 });
 
 test("nunca se tapan los tres carriles", () => {

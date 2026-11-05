@@ -207,7 +207,7 @@ function generate(level, rng) {
 export function createRun(seed, level = LEVELS[0]) {
   const s = seed >>> 0;
   const rng = mulberry32(s);
-  const origin = level.origins[s % level.origins.length];
+  const origin = { name: level.home, depart: level.depart };
   const world = generate(level, rng);
   return {
     seed: s,

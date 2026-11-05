@@ -288,13 +288,9 @@ export const LEVELS = [
   {
     id: 1,
     name: "La hora pico",
-    dest: "UVG",
-    origins: [
-      { name: "Villa Nueva", depart: 6 * 60 + 15 },
-      { name: "Mixco", depart: 6 * 60 + 30 },
-      { name: "Antigua", depart: 5 * 60 + 50 },
-      { name: "zona 18", depart: 6 * 60 + 10 },
-    ],
+    dest: "Build & Pitch",
+    home: "tu casa",
+    depart: 6 * 60 + 30,
     timeLimit: 90,
     rampEvery: 15,
     ramp: 1.08,

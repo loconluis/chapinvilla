@@ -34,30 +34,6 @@ function blit(ctx, spr, cx, cy, shadow) {
   return { x0, y0, w: w * SCALE, h: h * SCALE };
 }
 
-const GLYPH = {
-  U: ["101", "101", "101", "101", "111"],
-  V: ["101", "101", "101", "101", "010"],
-  G: ["111", "100", "101", "101", "111"],
-};
-
-function text3(ctx, str, x, y, color, s) {
-  ctx.fillStyle = PAL[color];
-  let cx = x;
-  for (let i = 0; i < str.length; i++) {
-    const g = GLYPH[str[i]];
-    if (!g) {
-      cx += 4 * s;
-      continue;
-    }
-    for (let r = 0; r < g.length; r++) {
-      for (let c = 0; c < g[r].length; c++) {
-        if (g[r][c] === "1") ctx.fillRect(cx + c * s, y + r * s, s, s);
-      }
-    }
-    cx += (g[0].length + 1) * s;
-  }
-}
-
 const parts = [];
 
 export function burst(x, y, color, n) {
@@ -244,7 +220,11 @@ export function render(ctx, run, dt, mode, deco) {
     ctx.fillRect(ROAD_X + ROAD_W - 6, gy - 26, 4, 28);
     ctx.fillStyle = PAL[2];
     ctx.fillRect(ROAD_X, gy, ROAD_W, 3);
-    text3(ctx, "UVG", ROAD_X + 28, gy - 20, 5, 3);
+    ctx.fillStyle = PAL[5];
+    ctx.font = "700 8px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(run.level.dest, ROAD_X + ROAD_W / 2, gy - 4);
   }
 
   if (run.boost > 0 && mode === "play") {
