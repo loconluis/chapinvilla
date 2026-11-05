@@ -110,13 +110,6 @@ function drawCity(ctx, z, seed) {
           }
         }
       }
-      if (hsh % 2 === 0) {
-        const lx = side === 0 ? ROAD_PX - 24 : ROAD_PX + ROAD_WPX + 18;
-        ctx.fillStyle = PAL[6];
-        ctx.fillRect(lx, y - 27, 3, 27);
-        ctx.fillStyle = PAL[2];
-        ctx.fillRect(lx - 2, y - 30, 6, 4);
-      }
     }
   }
 }
@@ -163,7 +156,6 @@ const SPR = {
   camioneta: "camioneta",
   motorista: "motorista",
   hoyo: "hoyo",
-  auto: "car",
   columna: "columna",
   cambia: "car",
   bus: "bus",
@@ -277,14 +269,22 @@ export function render(ctx, run, dt, mode, deco) {
   const near = run.finish - viewZ;
   if (near < 145 && near > -30) {
     const gy = worldY(viewZ, run.finish);
-    const park = run.level.park;
-    // En el parqueo no hay meta: hay un espacio pintado en el piso.
-    ctx.fillStyle = park ? PAL[5] : PAL[1];
-    ctx.fillRect(ROAD_PX + 10, gy - 40, 6, 46);
-    ctx.fillRect(ROAD_PX + ROAD_WPX - 16, gy - 40, 6, 46);
-    ctx.fillStyle = park ? PAL[5] : PAL[2];
-    ctx.fillRect(ROAD_PX + (park ? 10 : 0), gy + (park ? 4 : 0), ROAD_WPX - (park ? 20 : 0), 5);
-    if (!park) {
+    if (run.level.park) {
+      // Un solo espacio libre, en un solo carril. Las otras dos hileras están tapadas.
+      const x = ROAD_PX + LANE_PX * run.finishLane;
+      ctx.fillStyle = PAL[5];
+      ctx.fillRect(x + 2, gy - 40, 6, 46);
+      ctx.fillRect(x + LANE_PX - 10, gy - 40, 6, 46);
+      ctx.fillRect(x + 2, gy + 2, LANE_PX - 10, 5);
+      ctx.fillStyle = PAL[6];
+      ctx.fillRect(ROAD_PX, gy - 6, LANE_PX * run.finishLane, 12);
+      ctx.fillRect(x + LANE_PX, gy - 6, ROAD_WPX - LANE_PX * (run.finishLane + 1), 12);
+    } else {
+      ctx.fillStyle = PAL[1];
+      ctx.fillRect(ROAD_PX + 3, gy - 39, 6, 42);
+      ctx.fillRect(ROAD_PX + ROAD_WPX - 9, gy - 39, 6, 42);
+      ctx.fillStyle = PAL[2];
+      ctx.fillRect(ROAD_PX, gy, ROAD_WPX, 5);
       ctx.fillStyle = PAL[5];
       ctx.font = "700 12px monospace";
       ctx.textAlign = "center";

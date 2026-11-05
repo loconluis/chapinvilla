@@ -33,15 +33,17 @@ const KEY = "chapinvilla.v1";
 const STEP = 1 / 60;
 const LOSE = {
   energy: "Se acabó la gasolina y la moto se paró.",
+  lot: "Se acabó la hilera y no te metiste. Frená en el espacio libre.",
 };
 const FIRST = {
-  gasolina: "Gasolina: llena el tanque. Sin esto, la moto se para.",
+  gasolina: "Gasolina: llena el tanque. Sin esto no arranca.",
   cafe: "Café: te da velocidad. Llegar antes vale más.",
   tamal: "Tamal: baja el estrés, y el estrés chupa el tanque.",
 };
 const SEE = {
-  peaton: "Peatón en el paso. Frená en su carril y dejalo pasar: da puntos.",
+  peaton: "Peatón en el paso. Frená en su carril: deja pasar y da puntos.",
 };
+const PARK = "Espacio libre. Ponte en ese carril y frená para entrar.";
 const BOOST = "Turbo lleno. Esquivar lo recarga: ACELERA cuando esté listo.";
 const HIT = {
   hoyo: "baja energía y sube mucho el estrés",
@@ -375,7 +377,7 @@ function handle(events) {
     }
     else if (ev.k === "block") say("camioneta");
     else if (ev.k === "luck") say("suerte");
-    else if (ev.k === "boss") say("boss");
+    else if (ev.k === "boss") run.level.park ? teach("park", PARK) : say("boss");
     else if (ev.k === "need") say("turbo");
     else if (ev.k === "low") say("energia");
     else if (ev.k === "time") say("tiempo");

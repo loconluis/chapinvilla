@@ -245,7 +245,8 @@ function generate(level, rng, fill = 0) {
     bz += level.boss.gap;
   }
   ents.sort((a, b) => a.z - b.z);
-  return { ents, bossAt, finish: bz + 160 };
+  // El carril que quedó abierto en la última hilera es el espacio libre.
+  return { ents, bossAt, finish: bz + 160, finishLane: prev };
 }
 
 export function createRun(seed, level = LEVELS[0], arrived) {
@@ -263,8 +264,10 @@ export function createRun(seed, level = LEVELS[0], arrived) {
     ents: world.ents,
     bossAt: world.bossAt,
     finish: world.finish,
+    finishLane: world.finishLane,
     // el plazo puede ser fijo (el pitch arranca a las 9:00) o relativo al nivel
-    limit: level.fixedUntil ? level.fixedUntil - origin.depart : level.timeLimit,
+    // el plazo se acorta si llegás tarde, pero nunca baja de 60 s: perder por reloj sin jugar no es un nivel
+    limit: level.fixedUntil ? Math.max(60, level.fixedUntil - origin.depart) : level.timeLimit,
     z: 0,
     lane: 1,
     laneT: 1,
@@ -293,6 +296,17 @@ export function createRun(seed, level = LEVELS[0], arrived) {
     warnedEnergy: false,
     bossSaid: false,
   };
+}
+
+/** Cerrar la partida como ganada, con lo que suman la llegada y el tanque. */
+function park(run, events) {
+  const level = run.level;
+  run.won = true;
+  const early = Math.max(0, run.limit - run.t);
+  run.pt = Math.round(early * level.earlyPoint);
+  run.pm = Math.round(run.energy * level.motoFactor);
+  run.score += run.pt + run.pm;
+  events.push({ k: "win", early: Math.round(early), timeGain: run.pt, motoGain: run.pm });
 }
 
 function yOverlap(run, e) {
@@ -420,13 +434,20 @@ export function step(run, input, dt) {
   }
   if (run.energy > 42) run.warnedEnergy = false;
 
+  const atSpot = run.finish - run.z;
+  if (level.park && atSpot < 70 && atSpot > -10 && run.slow > 0 && occupied(run.laneT) === run.finishLane) {
+    park(run, events);
+    return events;
+  }
   if (run.z >= run.finish) {
-    run.won = true;
-    const early = Math.max(0, run.limit - run.t);
-    run.pt = Math.round(early * level.earlyPoint);
-    run.pm = Math.round(run.energy * level.motoFactor);
-    run.score += run.pt + run.pm;
-    events.push({ k: "win", early: Math.round(early), timeGain: run.pt, motoGain: run.pm });
+    // En el parqueo, llegar al final sin haberte metido es quedarte sin dónde.
+    if (level.park) {
+      run.alive = false;
+      run.reason = "lot";
+      events.push({ k: "lose", reason: "lot" });
+      return events;
+    }
+    park(run, events);
     return events;
   }
   if (run.energy <= 0) {

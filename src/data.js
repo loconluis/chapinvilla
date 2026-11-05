@@ -239,7 +239,6 @@ export const OBSTACLES = {
   bus: { h: 34, dmg: 30, stress: 18 },
   peaton: { h: 20, dmg: 12, stress: 16 },
   // Del parqueo: nadie se mueve, el castigo es por tamaño.
-  auto: { h: 24, dmg: 18, stress: 14 },
   columna: { h: 13, dmg: 22, stress: 18 },
 };
 
@@ -251,34 +250,13 @@ export const PICKUPS = {
 };
 
 export const LINES = {
-  hoyo: [
-    "Ese ya estaba desde antes",
-    "Ese hoyo ya es parte del mapa",
-  ],
-  camioneta: [
-    "¡Hay campo todavía!",
-    "Esa camioneta trae el día entero",
-  ],
-  motorista: [
-    "Ese calcula en milímetros",
-    "Te pasó rozando el espejo",
-  ],
-  cambia: [
-    "Ni puso direccional",
-    "Decidió tu carril por vos",
-  ],
-  bus: [
-    "El bus ocupa lo que quiere",
-    "Dos carriles, cero disculpas",
-  ],
-  tiempo: [
-    "Ya casi, vos",
-    "El reloj no pide permiso",
-  ],
-  energia: [
-    "Se está vaciando el tanque",
-    "Buscá gasolina, ya mismo",
-  ],
+  hoyo: ["Ese ya estaba desde antes"],
+  camioneta: ["¡Hay campo todavía!"],
+  motorista: ["Ese calcula en milímetros"],
+  cambia: ["Ni puso direccional"],
+  bus: ["El bus ocupa lo que quiere"],
+  tiempo: ["Ya casi, vos"],
+  energia: ["Se está vaciando el tanque"],
   turbo: [
     "Todavía no hay turbo",
     "Dejá que cargue, vos",
@@ -286,10 +264,7 @@ export const LINES = {
   gasolina: ["Tanque lleno, otra vez"],
   cafe: ["Café chapín. Ahora sí"],
   tamal: ["Tamal de emergencia"],
-  boss: [
-    "El tráfico eterno",
-    "Ahí vienen, ocupando dos carriles",
-  ],
+  boss: ["El tráfico eterno"],
   suerte: ["Hoy sí hubo suerte"],
   win: ["Llegaste. No preguntés cómo"],
 };
@@ -364,11 +339,12 @@ export const LEVELS = [
     boostMul: 1.7,
     boostTime: 0.8,
     startEnergy: 84,
-    length: 5200,
+    // La playa es corta a propósito: hay que poder cruzarla en 60 s.
+    length: 2600,
     gap0: 235,
     gap1: 130,
     boss: { name: "La última hilera", at: 0.78, waves: 3, gap: 200 },
-    obstacles: ["camioneta", "auto", "columna"],
+    obstacles: ["camioneta", "hoyo", "columna"],
     pickups: ["gasolina", "cafe", "tamal"],
     crossings: 6,
     crossBonus: 12,

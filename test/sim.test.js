@@ -326,11 +326,30 @@ test("el parqueo se llena según la hora a la que llegás", () => {
   // y cuanto más tarde, menos tiempo: el pitch arranca a las 9:00 igual para todos
   assert.ok(tarde.limit < medio.limit && medio.limit < temprano.limit, "el plazo se acorta");
   for (const run of [temprano, medio, tarde]) {
-    assert.equal(run.origin.depart + run.limit, L.fixedUntil, "todos corren hasta las 9:00");
+    // el plazo se acorta con la hora, pero nunca por debajo de 60 s
+    assert.equal(run.limit, Math.max(60, L.fixedUntil - run.origin.depart), "plazo a las " + run.origin.depart);
   }
   // misma semilla y misma hora, misma playa
   assert.equal(sig(createRun(7, L, 500)), sig(createRun(7, L, 500)));
   assert.notEqual(sig(createRun(7, L, 460)), sig(createRun(7, L, 500)));
+});
+
+test("el parqueo se gana frenando en el espacio, no llegando", () => {
+  const L = LEVELS[1];
+  // El que llega al final sin frenar en el hueco se queda sin dónde.
+  for (let seed = 1; seed <= 8; seed++) {
+    const sinFrenar = play(seed, choose, L, 7 * 60 + 40);
+    assert.equal(sinFrenar.won, false, "seed " + seed + " ganó sin frenar");
+    assert.equal(sinFrenar.reason, "lot", "seed " + seed);
+  }
+  // El que se pone en el carril del espacio y frena, entra.
+  let wins = 0;
+  for (let seed = 1; seed <= 8; seed++) {
+    const run = play(seed, parker, L, 7 * 60 + 40);
+    if (run.won) wins++;
+    else assert.fail("seed " + seed + " " + run.reason + " z " + Math.round(run.z) + " carril " + run.finishLane);
+  }
+  assert.equal(wins, 8);
 });
 
 test("el parqueo se puede ganar, incluso llegando tarde", () => {
@@ -338,7 +357,7 @@ test("el parqueo se puede ganar, incluso llegando tarde", () => {
   for (const arrived of [7 * 60 + 30, 8 * 60, 8 * 60 + 20]) {
     let wins = 0;
     for (let seed = 1; seed <= 10; seed++) {
-      const run = play(seed, fueled(yielding(choose)), L, arrived);
+      const run = play(seed, parker, L, arrived);
       if (run.won) wins++;
       else assert.fail("llegando " + arrived + " seed " + seed + " " + run.reason + " z " + Math.round(run.z) + "/" + run.finish);
       assert.ok(run.t < run.limit, "seed " + seed + " se pasó del plazo");
@@ -474,10 +493,14 @@ function sloppyOf(inner, seed) {
   };
 }
 
-function play(seed, policy) {
-  const run = createRun(seed);
+/** Piloto que maneja bien y, al final, se pone en el carril del espacio y frena. */
+const parker = (r) =>
+  r.finish - r.z < 26 ? { lane: r.finishLane, brake: true } : fueled(yielding(choose))(r);
+
+function play(seed, policy, level = LEVELS[0], arrived) {
+  const run = createRun(seed, level, arrived);
   let guard = 0;
-  while (run.alive && !run.won && guard++ < 60 * 200) {
+  while (run.alive && !run.won && guard++ < 60 * 220) {
     const want = policy(run);
     const lane = typeof want === "number" ? want : want.lane;
     const brake = typeof want === "number" ? false : !!want.brake;
