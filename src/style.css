@@ -23,7 +23,7 @@ button, p, h1, h2 { font: inherit; margin: 0; }
 h1, #clock, #barQ, #q, #joke, #panel h2, .total { color: #F5B324; }
 h1, #hud label, #q, .total, .rank, #panel h2 { font-weight: 700; }
 h1 { letter-spacing: .18em; font-size: 30px; line-height: 1.1; text-shadow: 3px 3px 0 #0D1216; }
-#tag { margin-top: 2px; font-size: 12px; }
+#tag, #m { margin-top: 2px; font-size: 12px; }
 #info, #mute, #pause { background: #0D1216; color: #F1E3C6; border: 0; min-height: 34px; padding: 4px 10px; cursor: pointer; }
 #mute { font-size: 11px; letter-spacing: .06em; }
 #mute.off { color: #E1532B; }
