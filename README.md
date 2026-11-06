@@ -1,6 +1,6 @@
-# Chapinvilla
+# Hora Pico
 
-La vida es difícil. El juego también.
+¡Corré, ya empieza el Build & Pitch!
 
 **La hora pico**: salís en moto desde tu casa a las 5:00 y tenés que llegar a Build & Pitch antes de las 8:00 sin quedarte sin gasolina.
 
@@ -34,7 +34,7 @@ GitHub Pages **sigue sin funcionar**: `loconluis.github.io/chapinvilla/` redirig
 
 Hecho con Node 22, Brotli calidad 11:
 
-- sin comprimir: 32632 bytes (99.6 % del tope de 32768)
-- Brotli: ~11700 bytes
+- sin comprimir: 32648 bytes (99.6 % del tope de 32768)
+- Brotli: 11592 bytes
 
 El lienzo lógico es 480×270 y la simulación trabaja en unidades de mundo (factor `Z = 1.5` en `geom.js`). Los sprites se publican empaquetados a 3 bits por píxel: el arte ASCII se queda en `src/data.js` y solo `dist/` lleva el blob.

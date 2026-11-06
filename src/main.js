@@ -331,7 +331,7 @@ async function challenge() {
     mode === "win"
       ? "Llegué a " + run.level.dest + " a las " + clockOf(run) + " con " + run.score + " puntos: " + rankOf(run.score) + ". ¿Me ganás?"
       : "No llegué a " + run.level.dest + ". Sumé " + run.score + " puntos saliendo desde mi casa. ¿Vos sí podés?";
-  const data = { title: "Chapinvilla", text, url };
+  const data = { title: "Hora Pico", text, url };
   if (navigator.share) {
     try {
       await navigator.share(data);
